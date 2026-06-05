@@ -6,11 +6,6 @@ from typing import Any, Callable
 from lucent import Convention
 
 
-class AssetDescription:
-    def __init__(self, assetblocks: list[AssetBlock]) -> None:
-        self.assetblocks = assetblocks
-
-
 def default_destination_path_callback(assetblock: AssetBlock) -> Path:
     paths = assetblock.convention.get_paths()
     if paths:
@@ -88,3 +83,8 @@ class EntryPoint:
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.label}) -> {self.object}"
+
+
+class Assembler:
+    def __init__(self) -> None:
+        pass
