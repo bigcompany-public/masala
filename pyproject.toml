@@ -11,7 +11,9 @@ dependencies = [
     "lucent-codex",
     "PySide6",
     "QtPy",
-    "QtAwesome"
+    "QtAwesome",
+    "NodeGraphQt",
+    "setuptools"
 ]
 
 [project.scripts]
