@@ -1,0 +1,25 @@
+{
+    "git.confirmSync": false,
+    "python.autoComplete.extraPaths": [
+        "c:\\Users\\tristan.languebien\\.vscode\\extensions\\fxtd-odyssey.mayapy-1.0.4\\mayaSDK",
+        
+    ],
+    "editor.rulers": [120],
+    "python.analysis.typeCheckingMode": "basic",
+    "[python]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+        },
+        "editor.defaultFormatter": "charliermarsh.ruff"
+    },
+    "[javascript]": {
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "biomejs.biome"
+    },
+    "python.analysis.extraPaths": [
+        "C:\\Users\\tristan.languebien\\.nuke\\NukeTools\\stubs"
+    ],
+    "explorer.confirmDelete": false
+}

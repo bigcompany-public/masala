@@ -1,0 +1,22 @@
+[project]
+name = "masala"
+version = "0.0.1"
+description = 'Masala is a system for creating assets from modular building blocks ("assetBlocks") that are exported independently and later recombined'
+readme = "README.md"
+authors = [
+    { name = "Tristan Languebien", email = "tlanguebien@gmail.com" }
+]
+requires-python = ">=3.9"
+dependencies = [
+    "lucent-codex",
+    "PySide6",
+    "QtPy",
+    "QtAwesome"
+]
+
+[project.scripts]
+masala = "masala:main"
+
+[build-system]
+requires = ["uv_build>=0.10.11,<0.11.0"]
+build-backend = "uv_build"
