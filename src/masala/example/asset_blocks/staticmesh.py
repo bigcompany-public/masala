@@ -15,5 +15,5 @@ static_mesh = AssetBlock(
     label="Static Mesh",
     description="Geometries of the asset, without materials, deformers...",
     convention=codex.convs.assetblock_static_mesh,
-    destination_path_callback=custom_path,
+    # destination_path_callback=custom_path,
 )

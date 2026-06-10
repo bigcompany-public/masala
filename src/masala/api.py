@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 from pathlib import Path
 from typing import Callable
 
@@ -12,13 +14,20 @@ class DuplicateAssetBlockError(Exception): ...
 class AssetBlockNotFoundError(Exception): ...
 
 
-def default_destination_path_callback(assetblock: AssetBlock) -> Path:
-    paths = assetblock.convention.get_paths()
+class ExportFailed(Exception): ...
+
+
+def default_destination_path_callback(exporter: Exporter) -> Path:
+    fields = exporter.get_current_fields()
+    paths = exporter.convention.get_paths()
     if paths:
-        return Path(assetblock.convention.increment(paths[-1]))
-    fields = assetblock.get_current_fields()
+        return Path(exporter.convention.increment(paths[-1]))
     fields["version"] = 1  # type: ignore
-    return Path(assetblock.convention.format(fields))
+    return Path(exporter.convention.format(fields))
+
+
+def get_metadata_path(path: Path) -> Path:
+    return path.with_suffix(".abmd")
 
 
 class AssetBlock:
@@ -28,39 +37,82 @@ class AssetBlock:
         label: str,
         description: str,
         convention: Convention,
-        destination_path_callback: Callable[[AssetBlock], Path] | None = None,
     ) -> None:
         self.name = name
         self.label = label or name.replace("_", " ").replace("-", " ").title()
         self.description = description
         self.convention = convention
         self.codex = convention._codex
-        self.current_path_callback: Callable[..., Path] | None = None
-        self.destination_path_callback = destination_path_callback or default_destination_path_callback
-        self.loaded = False
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self.name})"
 
+
+class Exporter:
+    def __init__(
+        self,
+        assetblock: AssetBlock,
+        current_path_callback: Callable[..., Path],
+        export_callback: Callable[[Path], None],
+        destination_path_callback: Callable[[Exporter], Path] | None = None,
+        metadata_callback: Callable[..., dict] | None = None,
+        variable_fields: list[str] = ["version", "description"],
+    ) -> None:
+        self.assetblock = assetblock
+        self.convention = self.assetblock.convention
+        self.codex = self.assetblock.codex
+        self.current_path_callback = current_path_callback
+        self.destination_path_callback = destination_path_callback or default_destination_path_callback
+        self.export_callback = export_callback
+        self.metadata_callback = metadata_callback
+        self.variable_fields = variable_fields or []
+
     def get_current_path(self) -> Path:
-        """Returns the path to the current scene"""
-        if not self.current_path_callback:
-            raise AttributeError("Please provide a current_path_callback")
         return self.current_path_callback()
 
     def get_current_fields(self) -> dict[str, str]:
-        return self.codex.get_fields(self.get_current_path())  # type: ignore
+        fields = self.codex.get_fields(self.get_current_path())  # type: ignore
+        for field in self.variable_fields:
+            if fields.get(field):
+                fields.pop(field)
+        return fields
 
     def get_destination_path(self) -> Path:
         return self.destination_path_callback(self)
 
-    def get_last_path(self) -> Path:
-        fields = self.get_current_fields()
-        if fields["version"]:
-            fields.pop("version")
-        if fields["description"]:
-            fields.pop("description")
-        return self.convention.get_last_path(fields)
+    def export(self):
+        path = self.get_destination_path()
+        print(f"Exporting {self.assetblock.label} to {path}")
+        path.parent.mkdir(exist_ok=True, parents=True)
+        self.export_callback(path)
+        self.ensure_path(path)
+        self.write_metadata(get_metadata_path(path))
+
+    def get_base_metadata(self) -> dict:
+        metadata = {
+            "user": os.environ["USERNAME"],
+            "computer": os.environ["COMPUTERNAME"],
+            "date": "{year}_{month}_{day}_{hour}_{min}_{sec}".format(**self.codex.get_datetime_fields()),
+        }
+        return metadata
+
+    def get_extra_metadata(self) -> dict:
+        if not self.metadata_callback:
+            return {}
+        return self.metadata_callback()
+
+    def get_metadata(self) -> dict:
+        metadata = self.get_base_metadata()
+        metadata.update(self.get_extra_metadata())
+        return metadata
+
+    def ensure_path(self, path: Path):
+        if not path.exists():
+            raise ExportFailed(f"No file found at {path}. Export most likely failed.")
+
+    def write_metadata(self, path: Path):
+        print(f"Writing metadata to {path}")
+        path.write_text(json.dumps(self.get_metadata(), indent=4))
 
 
 class AssetBlockRegistry:
@@ -86,7 +138,7 @@ class AssetBlockRegistry:
         self._iterindex = len(self._assetblocks)
         return self
 
-    def __next__(self):
+    def __next__(self) -> AssetBlock:
         if self._iterindex == 0:
             raise StopIteration
         self._iterindex = self._iterindex - 1
@@ -110,5 +162,8 @@ class AssetBlockRegistry:
             raise AssetBlockNotFoundError(f'AssetBlock label not found : "{label}"')
         return assetblocks[0]
 
-    def __getitem__(self, key: str):
-        return self.get_assetblock_by_name(key)
+    def __getitem__(self, key: str | int):
+        if isinstance(key, str):
+            return self.get_assetblock_by_name(key)
+        elif isinstance(key, int):
+            return self._assetblocks[key]
