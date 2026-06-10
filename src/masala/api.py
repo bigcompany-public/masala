@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Callable
 
 from lucent import Convention
+
+logger = logging.getLogger(__name__)
 
 
 class DuplicateAssetBlockError(Exception): ...
@@ -56,7 +59,7 @@ class Exporter:
         export_callback: Callable[[Path], None],
         destination_path_callback: Callable[[Exporter], Path] | None = None,
         metadata_callback: Callable[..., dict] | None = None,
-        variable_fields: list[str] = ["version", "description"],
+        variable_fields: list[str] | None = None,
     ) -> None:
         self.assetblock = assetblock
         self.convention = self.assetblock.convention
@@ -65,7 +68,7 @@ class Exporter:
         self.destination_path_callback = destination_path_callback or default_destination_path_callback
         self.export_callback = export_callback
         self.metadata_callback = metadata_callback
-        self.variable_fields = variable_fields or []
+        self.variable_fields = variable_fields if variable_fields is not None else ["version", "description"]
 
     def get_current_path(self) -> Path:
         return self.current_path_callback()
@@ -82,11 +85,12 @@ class Exporter:
 
     def export(self):
         path = self.get_destination_path()
-        print(f"Exporting {self.assetblock.label} to {path}")
+        logger.info(f"Exporting {self.assetblock.label} to {path}")
         path.parent.mkdir(exist_ok=True, parents=True)
         self.export_callback(path)
         self.ensure_path(path)
-        self.write_metadata(get_metadata_path(path))
+        metadata_path = get_metadata_path(path)
+        self.write_metadata(metadata_path)
 
     def get_base_metadata(self) -> dict:
         metadata = {
@@ -111,7 +115,7 @@ class Exporter:
             raise ExportFailed(f"No file found at {path}. Export most likely failed.")
 
     def write_metadata(self, path: Path):
-        print(f"Writing metadata to {path}")
+        logger.info(f"Writing metadata to {path}")
         path.write_text(json.dumps(self.get_metadata(), indent=4))
 
 
@@ -120,7 +124,6 @@ class AssetBlockRegistry:
         self._assetblocks: list[AssetBlock] = []
         for assetblock in sorted(assetblocks, key=lambda x: x.name):
             self.register_assetblock(assetblock)
-        self._iterindex: int = 0
 
     def register_assetblock(self, assetblock: AssetBlock):
         if assetblock.name in self.get_assetblock_names():
@@ -130,19 +133,11 @@ class AssetBlockRegistry:
         self._assetblocks.append(assetblock)
 
     def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__}({len(self._assetblocks)} AssetBlock{'s' if len(self._assetblocks) > 1 else ''})"
-        )
+        count = len(self._assetblocks)
+        return f"{self.__class__.__name__}({count} AssetBlock{'s' if count > 1 else ''})"
 
     def __iter__(self):
-        self._iterindex = len(self._assetblocks)
-        return self
-
-    def __next__(self) -> AssetBlock:
-        if self._iterindex == 0:
-            raise StopIteration
-        self._iterindex = self._iterindex - 1
-        return self._assetblocks[self._iterindex]
+        return iter(self._assetblocks)
 
     def get_assetblock_names(self) -> list[str]:
         return [assetblock.name for assetblock in self._assetblocks]
