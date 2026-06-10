@@ -4,6 +4,7 @@ import bpy
 
 from masala.api import Exporter
 from masala.example.asset_blocks.staticmesh import static_mesh
+from masala.example.codex import codex
 
 
 def get_path() -> Path:
@@ -15,7 +16,7 @@ def get_path() -> Path:
 
 def export(path: Path):
     bpy.ops.wm.usd_export(
-        filepath=str(path.with_name(".usda")),
+        filepath=str(path),
         selected_objects_only=False,
         export_animation=False,
         export_hair=False,
@@ -29,7 +30,7 @@ def export(path: Path):
         use_instancing=False,
         convert_orientation=False,
         relative_paths=True,
-        root_prim_path="/root/elderSprite",
+        root_prim_path=codex.transmute(path, target_convention=codex.convs.static_mesh_prim_root),
         export_custom_properties=True,
         custom_properties_namespace="masala",
         accessibility_label="",

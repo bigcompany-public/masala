@@ -28,8 +28,9 @@ class MasalaConventions(Conventions):
     assetblock_dir = Convention("{@project_root}/assetBlocksLibrary/{type}/{asset}/{assetBlock}")
     assetblock_static_mesh = Convention(
         "{@assetblock_dir}/v{version}/{asset}_{assetBlock}_v{version}.{extension}",
-        fixed_fields={"assetBlock": "staticMesh", "extension": "obj"},
+        fixed_fields={"assetBlock": "staticMesh", "extension": "usda"},
     )
+    static_mesh_prim_root = Convention("/root/{asset}")
 
 
 class MasalaCodex(Codex):
