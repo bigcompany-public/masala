@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from pathlib import Path
 
-from NodeGraphQt import BaseNode, NodeBaseWidget, NodeGraph
+from NodeGraphQt import BaseNode, NodeBaseWidget, NodeGraph, Port
+from NodeGraphQt.constants import PortTypeEnum
+from NodeGraphQt.widgets.node_widgets import NodeButton
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication, QComboBox, QPushButton, QVBoxLayout, QWidget
 
@@ -26,13 +30,14 @@ class Output:
     typ: str
 
 
-class AssetBlockInnerWidget(QWidget):
+class AssetBlockWidget(QWidget):
     """
     Custom widget to be embedded inside a node.
     """
 
-    def __init__(self):
+    def __init__(self, assetblock_node: AssetBlockNode):
         super().__init__()
+        self.assetblock_node = assetblock_node
         self.initial_path: Path | None = None
         self.assetblock: AssetBlock | None = None
         self.registry: AssetBlockRegistry | None = None
@@ -41,13 +46,13 @@ class AssetBlockInnerWidget(QWidget):
 
     def setup_signals(self):
         self.search_paths_button.clicked.connect(self.search_button_clicked)
+        self.path_combobox.currentIndexChanged.connect(self.path_changed)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         self.search_paths_button = QPushButton("Search")
         layout.addWidget(self.search_paths_button)
         self.path_combobox = QComboBox()
-        self.path_combobox.addItems(["NAH"])
         layout.addWidget(self.path_combobox)
 
     def set_registry(self, assetblock_registry: AssetBlockRegistry):
@@ -91,11 +96,19 @@ class AssetBlockInnerWidget(QWidget):
         paths = self.assetblock.convention.get_paths(fields)
         self.update_items(paths)
 
+    @property
+    def path_port(self) -> Port:
+        return self.assetblock_node.outputs()["Path"]
 
-class AssetBlockInnerWidgetWrapper(NodeBaseWidget):
-    def __init__(self, parent=None):
+    def path_changed(self):
+        self.path_port.value = self.get_selected_path()
+
+
+class AssetBlockWidgetWrapper(NodeBaseWidget):
+    def __init__(self, parent, assetblock_node: AssetBlockNode):
         super().__init__(parent, label="Path")
-        self._widget = AssetBlockInnerWidget()
+        self.assetblock_node = assetblock_node
+        self._widget = AssetBlockWidget(assetblock_node=assetblock_node)
         self.set_custom_widget(self._widget)
 
     def get_value(self):
@@ -112,23 +125,80 @@ class AssetBlockNode(BaseNode):
     def __init__(self) -> None:
         super().__init__()
 
-        self._wrapper = AssetBlockInnerWidgetWrapper(self.view)
+        self._wrapper = AssetBlockWidgetWrapper(parent=self.view, assetblock_node=self)
         self._widget = self._wrapper._widget
         self.add_custom_widget(self._wrapper)
         self.add_output("Path", color=type_to_color("Path"))
         self.add_output("Metadata", color=type_to_color("dict"))
 
 
+class FunctionWidget(QWidget):
+    """
+    Custom widget to be embedded inside a node.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.setMinimumWidth(500)
+
+
+class FunctionWidgetWrapper(NodeBaseWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent, label="")
+        self._widget = FunctionWidget()
+        self.set_custom_widget(self._widget)
+
+    def get_value(self):
+        return "A"
+
+    def set_value(self, value):
+        return "B"
+
+
+class FunctionNode(BaseNode):
+    __identifier__ = "masala"
+    NODE_NAME = "FunctionNode"
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        # self._wrapper = FunctionWidgetWrapper(self.view)
+        # self._widget = self._wrapper._widget
+        # self.add_custom_widget(self._wrapper)
+        self.add_button("test", label="Test")
+        button: NodeButton = self.get_widget("test")
+        button._button.clicked.connect(self.button_clicked)
+        path_input = self.add_input("Path", color=type_to_color("Path"))
+        path_input.add_accept_port_type(
+            port_name="Path", port_type=PortTypeEnum.OUT.value, node_type="masala.AssetBlockNode"
+        )
+
+        self.add_input("Metadata", color=type_to_color("dict"))
+
+        self.add_output("Path", color=type_to_color("Path"))
+        self.add_output("Metadata", color=type_to_color("dict"))
+
+    def button_clicked(self):
+        port: Port = self.input(0)
+        ports = port.connected_ports()
+        if not ports:
+            raise RuntimeError("Port not connected")
+        port = ports[0]
+        print(port.value)
+
+
 def show_dialog(assetblock_registry: AssetBlockRegistry):
     app = QApplication([])
     graph = NodeGraph()
-    graph.register_nodes([AssetBlockNode])
+    graph.register_nodes([AssetBlockNode, FunctionNode])
 
-    abnode: AssetBlockNode = graph.create_node("masala.AssetBlockNode")
-    abnode._widget.set_registry(assetblock_registry)
-    abnode._widget.set_initial_path(
+    ab_node: AssetBlockNode = graph.create_node("masala.AssetBlockNode")
+    ab_node._widget.set_registry(assetblock_registry)
+    ab_node._widget.set_initial_path(
         Path(r"\\srv-bc-fs1\Norman\assetBlocksLibrary\lab\elderSprite\staticMesh\v004\elderSprite_staticMesh_v004.usda")
     )
+    func_node: FunctionNode = graph.create_node("masala.FunctionNode", pos=(500, 0))
+    func_node: FunctionNode = graph.create_node("masala.FunctionNode", pos=(500, 300))
 
     graph_widget = graph.widget
     graph_widget.show()
