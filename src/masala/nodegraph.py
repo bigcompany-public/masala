@@ -62,9 +62,13 @@ class AssetBlockInnerWidget(QWidget):
         self.path_combobox.clear()
         if not self.assetblock:
             raise RuntimeError("Cannot fetch paths if the AssetBlock is not defined")
-        versions = [self.assetblock.convention.parse(path)["version"] for path in paths]
-        self.path_combobox.addItems(versions)
+        for path in paths:
+            version = self.assetblock.convention.parse(path)["version"]
+            self.path_combobox.addItem(version, path)
         self.path_combobox.setCurrentIndex(self.path_combobox.count() - 1)
+
+    def get_selected_path(self) -> Path:
+        return self.path_combobox.currentData()
 
     def guess_assetblock(self):
         if not self.registry:
