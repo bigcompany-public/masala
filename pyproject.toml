@@ -13,7 +13,7 @@ dependencies = [
     "QtPy",
     "QtAwesome",
     "NodeGraphQt",
-    "setuptools"
+    "setuptools",
 ]
 
 [project.scripts]

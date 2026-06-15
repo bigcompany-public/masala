@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Callable
 
-from lucent import Convention
+from lucent import Codex, Convention
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +120,9 @@ class Exporter:
 
 
 class AssetBlockRegistry:
-    def __init__(self, assetblocks: list[AssetBlock]) -> None:
+    def __init__(self, assetblocks: list[AssetBlock], codex: Codex) -> None:
         self._assetblocks: list[AssetBlock] = []
+        self._codex = codex
         for assetblock in sorted(assetblocks, key=lambda x: x.name):
             self.register_assetblock(assetblock)
 
