@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from NodeGraphQt import BaseNode, NodeBaseWidget, NodeGraph, Port
 from NodeGraphQt.widgets.node_widgets import NodeButton
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QApplication, QComboBox, QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QComboBox, QFileDialog, QPushButton, QVBoxLayout, QWidget
 
-from masala.api import AssetBlock, AssetBlockRegistry
+from masala.api import AssetBlock, AssetBlockRegistry, FunctionNodeDescription, Input, Output
 
 NOT_SET = "NOT SET"
 
@@ -26,19 +25,6 @@ def hex_to_tuple(hex_color: str) -> tuple[int, int, int]:
     return (qcolor.red(), qcolor.green(), qcolor.blue())
 
 
-@dataclass
-class Input:
-    name: str
-    typ: str
-    mandatory: bool = False
-
-
-@dataclass
-class Output:
-    name: str
-    typ: str
-
-
 class MasalaPort(Port):
     def __init__(self, node, port):
         super().__init__(node, port)
@@ -52,70 +38,79 @@ class AssetBlockWidget(QWidget):
 
     def __init__(self, assetblock_node: AssetBlockNode):
         super().__init__()
+        if not assetblock_node.ASSETBLOCK:
+            raise RuntimeError("AssetBlock is not defined")
         self.assetblock_node = assetblock_node
-        self.initial_path: Path | None = None
-        self.assetblock: AssetBlock | None = None
-        self.registry: AssetBlockRegistry | None = None
+        self.assetblock: AssetBlock = assetblock_node.ASSETBLOCK
         self.setup_ui()
         self.setup_signals()
 
     def setup_signals(self):
-        self.search_paths_button.clicked.connect(self.search_button_clicked)
-        self.path_combobox.currentIndexChanged.connect(self.path_changed)
+        self.browse_button.clicked.connect(self.browse_button_clicked)
+        self.version_combobox.currentIndexChanged.connect(self.version_index_changed)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        self.search_paths_button = QPushButton("Search")
-        layout.addWidget(self.search_paths_button)
-        self.path_combobox = QComboBox()
-        layout.addWidget(self.path_combobox)
-
-    def set_registry(self, assetblock_registry: AssetBlockRegistry):
-        self.registry = assetblock_registry
-
-    def set_initial_path(self, path: Path):
-        self.initial_path = path
-        self.guess_assetblock()
-        self.update_items([self.initial_path])
+        self.browse_button = QPushButton("Browse")
+        layout.addWidget(self.browse_button)
+        self.version_combobox = QComboBox()
+        layout.addWidget(self.version_combobox)
 
     def update_items(self, paths: list[Path]):
-        self.path_combobox.clear()
-        if not self.assetblock:
-            raise RuntimeError("Cannot fetch paths if the AssetBlock is not defined")
+        self.version_combobox.blockSignals(True)
+        self.version_combobox.clear()
         for path in paths:
             version = self.assetblock.convention.parse(path)["version"]
-            self.path_combobox.addItem(version, path)
-        self.path_combobox.setCurrentIndex(self.path_combobox.count() - 1)
+            self.version_combobox.addItem(version, path)
+        self.version_combobox.setCurrentIndex(self.version_combobox.count() - 1)
+        self.version_combobox.blockSignals(False)
 
     def get_selected_path(self) -> Path:
-        return self.path_combobox.currentData()
+        return self.version_combobox.currentData()
 
-    def guess_assetblock(self):
-        if not self.registry:
-            raise RuntimeError("Please provide a registry")
-        if not self.initial_path:
-            raise RuntimeError("Cannot guess the AssetBlock if no path is provided")
-        conv = self.registry._codex.get_convention(self.initial_path)
-        assetblocks = [assetblock for assetblock in self.registry.assetblocks if assetblock.convention == conv]
-        if not assetblocks:
-            raise RuntimeError("No AssetBlock type matches the provided path")
-        self.assetblock = assetblocks[0]
+    def browse_button_clicked(self):
+        path = self.show_file_dialog()
+        if not path:
+            return
+        paths = self.get_all_paths(path)
+        self.update_items(paths)
+        self.set_path_index(path)
 
-    def search_button_clicked(self):
-        if not self.assetblock:
-            raise RuntimeError("Cannot fetch paths if the AssetBlock is not defined")
-        if not self.initial_path:
-            raise RuntimeError("Cannot parse initial path if none is provided")
-        fields = self.assetblock.convention.parse(self.initial_path)
+    def set_path_index(self, path: Path):
+        index = self.version_combobox.findData(path)
+        self.version_combobox.setCurrentIndex(index)
+
+    def get_all_paths(self, path: Path) -> list[Path]:
+        fields = self.assetblock.convention.parse(path)
         fields.pop("version")
         paths = self.assetblock.convention.get_paths(fields)
-        self.update_items(paths)
+        return paths
+
+    def get_context_fields(self) -> dict:
+        return {}
+
+    def show_file_dialog(self) -> Path | None:
+        # Get root dir
+        conv = self.assetblock.convention
+        pattern = conv.glob_pattern(self.get_context_fields())
+        pattern = Path(pattern).as_posix()
+        root_path = pattern.split("*", 1)[0].rsplit("/", 1)[0]
+
+        # Get extension
+        extension = conv.fixed_fields.get("extension") or "*"
+
+        # Show dialog
+        path = QFileDialog.getOpenFileName(
+            parent=None, dir=root_path, caption="Pick Asset Block", filter=f"(*.{extension})"
+        )[0]
+        if path:
+            return Path(path)
 
     @property
     def path_port(self) -> MasalaPort:
         return self.assetblock_node.outputs()["Path"]
 
-    def path_changed(self):
+    def version_index_changed(self):
         self.path_port.value = self.get_selected_path()
 
 
@@ -136,6 +131,8 @@ class AssetBlockWidgetWrapper(NodeBaseWidget):
 class AssetBlockNode(BaseNode):
     __identifier__ = "masala"
     NODE_NAME = "AssetBlock"
+    ASSETBLOCK: AssetBlock | None = None
+    REGISTRY: AssetBlockRegistry | None = None
 
     def __init__(self) -> None:
         super().__init__()
@@ -156,8 +153,7 @@ class AssetBlockNode(BaseNode):
 class FunctionNode(BaseNode):
     __identifier__ = "masala"
     NODE_NAME = "FunctionNode"
-    INPUTS: list[Input] = []
-    OUTPUTS: list[Output] = []
+    FUNCTION_DESCRIPTION: FunctionNodeDescription
 
     def __init__(self) -> None:
         super().__init__()
@@ -179,42 +175,69 @@ class FunctionNode(BaseNode):
         port = ports[0]
 
     def add_input_ports(self):
-        for input in self.INPUTS:
+        for input in self.FUNCTION_DESCRIPTION.inputs:
             self.add_input_port(input)
 
     def add_input_port(self, input: Input):
-        self.add_input(input.name, color=type_to_color(input.typ))
+        self.add_input(input.label, color=type_to_color(input.typ))
 
     def add_output_ports(self):
-        self.OUTPUTS.insert(0, Output(name="executed", typ="bool"))
-        for output in self.OUTPUTS:
+        self.FUNCTION_DESCRIPTION.outputs.insert(0, Output(label="executed", typ="bool"))
+        for output in self.FUNCTION_DESCRIPTION.outputs:
             self.add_output_port(output)
 
     def add_output_port(self, output: Output):
-        self.add_output(output.name, color=type_to_color(output.typ))
+        self.add_output(output.label, color=type_to_color(output.typ))
 
     def input(self, index) -> MasalaPort:
         return super().input(index)
 
 
-def show_dialog(assetblock_registry: AssetBlockRegistry):
-    app = QApplication([])
-    graph = NodeGraph()
-    graph.register_nodes([AssetBlockNode, FunctionNode])
+class AssemblerGraph:
+    def __init__(
+        self, assetblock_registry: AssetBlockRegistry, function_node_descriptions: list[FunctionNodeDescription]
+    ) -> None:
+        self.app = QApplication([])
+        self.assetblock_registry = assetblock_registry
+        self.function_node_descriptions = function_node_descriptions
+        self.graph = NodeGraph()
+        self.configure_hotkeys()
+        self.register_nodes()
 
-    ab_node: AssetBlockNode = graph.create_node("masala.AssetBlockNode")
-    ab_node._widget.set_registry(assetblock_registry)
-    ab_node._widget.set_initial_path(
-        Path(r"\\srv-bc-fs1\Norman\assetBlocksLibrary\lab\elderSprite\staticMesh\v004\elderSprite_staticMesh_v004.usda")
-    )
-    func_node: MyFunctionNode = graph.create_node("masala.MyFunctionNode", pos=(500, 0))
-    # func_node: FunctionNode = graph.create_node("masala.FunctionNode", pos=(500, 300))
+    def configure_hotkeys(self):
+        hotkey_path = Path(__file__).parent / "hotkeys.json"
+        self.graph.set_context_menu_from_file(hotkey_path, "graph")
 
-    graph_widget = graph.widget
-    graph_widget.show()
+    def register_nodes(self):
+        all_nodes = []
+        for assetblock in self.assetblock_registry.assetblocks:
+            new_class = type(
+                assetblock.name,
+                (AssetBlockNode,),
+                {
+                    "__identifier__": "masala.assetblocks",
+                    "NODE_NAME": assetblock.label,
+                    "ASSETBLOCK": assetblock,
+                    "REGISTRY": self.assetblock_registry,
+                },
+            )
+            all_nodes.append(new_class)
 
-    app.exec_()
+        for description in self.function_node_descriptions:
+            new_class = type(
+                description.name,
+                (FunctionNode,),
+                {
+                    "__identifier__": "masala.functions",
+                    "NODE_NAME": description.label,
+                    "FUNCTION_DESCRIPTION": description,
+                },
+            )
+            all_nodes.append(new_class)
 
+        self.graph.register_nodes(all_nodes)
 
-if __name__ == "__main__":
-    show_dialog()
+    def show_dialog(self):
+        graph_widget = self.graph.widget
+        graph_widget.show()
+        self.app.exec_()
