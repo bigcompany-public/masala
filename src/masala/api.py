@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
@@ -163,3 +164,25 @@ class AssetBlockRegistry:
             return self.get_assetblock_by_name(key)
         elif isinstance(key, int):
             return self.assetblocks[key]
+
+
+@dataclass
+class Input:
+    label: str
+    typ: str
+    mandatory: bool = False
+
+
+@dataclass
+class Output:
+    label: str
+    typ: str
+
+
+@dataclass
+class FunctionNodeDescription:
+    name: str
+    label: str
+    callback: Callable
+    inputs: list[Input]
+    outputs: list[Output] = field(default_factory=list[Output])
