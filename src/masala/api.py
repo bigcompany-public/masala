@@ -121,7 +121,7 @@ class Exporter:
 
 class AssetBlockRegistry:
     def __init__(self, assetblocks: list[AssetBlock], codex: Codex) -> None:
-        self._assetblocks: list[AssetBlock] = []
+        self.assetblocks: list[AssetBlock] = []
         self._codex = codex
         for assetblock in sorted(assetblocks, key=lambda x: x.name):
             self.register_assetblock(assetblock)
@@ -131,29 +131,29 @@ class AssetBlockRegistry:
             raise DuplicateAssetBlockError(f'Multiple AssetBlocks with name "{assetblock.name}" cannot be registered')
         if assetblock.label in self.get_assetblock_labels():
             raise DuplicateAssetBlockError(f'Multiple AssetBlocks with label "{assetblock.label}" cannot be registered')
-        self._assetblocks.append(assetblock)
+        self.assetblocks.append(assetblock)
 
     def __repr__(self) -> str:
-        count = len(self._assetblocks)
+        count = len(self.assetblocks)
         return f"{self.__class__.__name__}({count} AssetBlock{'s' if count > 1 else ''})"
 
     def __iter__(self):
-        return iter(self._assetblocks)
+        return iter(self.assetblocks)
 
     def get_assetblock_names(self) -> list[str]:
-        return [assetblock.name for assetblock in self._assetblocks]
+        return [assetblock.name for assetblock in self.assetblocks]
 
     def get_assetblock_labels(self) -> list[str]:
-        return [assetblock.label for assetblock in self._assetblocks]
+        return [assetblock.label for assetblock in self.assetblocks]
 
     def get_assetblock_by_name(self, name: str) -> AssetBlock:
-        assetblocks = [assetblock for assetblock in self._assetblocks if assetblock.name == name]
+        assetblocks = [assetblock for assetblock in self.assetblocks if assetblock.name == name]
         if not assetblocks:
             raise AssetBlockNotFoundError(f'AssetBlock name not found : "{name}"')
         return assetblocks[0]
 
     def get_assetblock_by_label(self, label: str) -> AssetBlock:
-        assetblocks = [assetblock for assetblock in self._assetblocks if assetblock.label == label]
+        assetblocks = [assetblock for assetblock in self.assetblocks if assetblock.label == label]
         if not assetblocks:
             raise AssetBlockNotFoundError(f'AssetBlock label not found : "{label}"')
         return assetblocks[0]
@@ -162,4 +162,4 @@ class AssetBlockRegistry:
         if isinstance(key, str):
             return self.get_assetblock_by_name(key)
         elif isinstance(key, int):
-            return self._assetblocks[key]
+            return self.assetblocks[key]

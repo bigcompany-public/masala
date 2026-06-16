@@ -2,18 +2,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from NodeGraphQt import BaseNode, NodeBaseWidget, NodeGraph, Port
-from NodeGraphQt.constants import PortTypeEnum
 from NodeGraphQt.widgets.node_widgets import NodeButton
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication, QComboBox, QPushButton, QVBoxLayout, QWidget
 
 from masala.api import AssetBlock, AssetBlockRegistry
 
+NOT_SET = "NOT SET"
+
 
 def type_to_color(typ: str) -> tuple[int, int, int]:
-    mapping = {"Path": "#00FFDD", "dict": "#3CFF00"}
+    mapping = {"Path": "#00FFDD", "dict": "#3CFF00", "bool": "#58608F"}
     color = mapping.get(typ, "#FFFFFF")
     return hex_to_tuple(color)
 
@@ -25,9 +27,22 @@ def hex_to_tuple(hex_color: str) -> tuple[int, int, int]:
 
 
 @dataclass
+class Input:
+    name: str
+    typ: str
+    mandatory: bool = False
+
+
+@dataclass
 class Output:
     name: str
     typ: str
+
+
+class MasalaPort(Port):
+    def __init__(self, node, port):
+        super().__init__(node, port)
+        self.value: Any = NOT_SET
 
 
 class AssetBlockWidget(QWidget):
@@ -81,7 +96,7 @@ class AssetBlockWidget(QWidget):
         if not self.initial_path:
             raise RuntimeError("Cannot guess the AssetBlock if no path is provided")
         conv = self.registry._codex.get_convention(self.initial_path)
-        assetblocks = [assetblock for assetblock in self.registry._assetblocks if assetblock.convention == conv]
+        assetblocks = [assetblock for assetblock in self.registry.assetblocks if assetblock.convention == conv]
         if not assetblocks:
             raise RuntimeError("No AssetBlock type matches the provided path")
         self.assetblock = assetblocks[0]
@@ -97,7 +112,7 @@ class AssetBlockWidget(QWidget):
         self.update_items(paths)
 
     @property
-    def path_port(self) -> Port:
+    def path_port(self) -> MasalaPort:
         return self.assetblock_node.outputs()["Path"]
 
     def path_changed(self):
@@ -131,60 +146,55 @@ class AssetBlockNode(BaseNode):
         self.add_output("Path", color=type_to_color("Path"))
         self.add_output("Metadata", color=type_to_color("dict"))
 
+    def output(self, index) -> MasalaPort:
+        return super().output(index)
 
-class FunctionWidget(QWidget):
-    """
-    Custom widget to be embedded inside a node.
-    """
-
-    def __init__(self):
-        super().__init__()
-        self.setMinimumWidth(500)
-
-
-class FunctionWidgetWrapper(NodeBaseWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent, label="")
-        self._widget = FunctionWidget()
-        self.set_custom_widget(self._widget)
-
-    def get_value(self):
-        return "A"
-
-    def set_value(self, value):
-        return "B"
+    def outputs(self) -> dict[str, MasalaPort]:
+        return super().outputs()
 
 
 class FunctionNode(BaseNode):
     __identifier__ = "masala"
     NODE_NAME = "FunctionNode"
+    INPUTS: list[Input] = []
+    OUTPUTS: list[Output] = []
 
     def __init__(self) -> None:
         super().__init__()
+        self.add_execute_button()
+        self.add_input_ports()
+        self.add_output_ports()
 
-        # self._wrapper = FunctionWidgetWrapper(self.view)
-        # self._widget = self._wrapper._widget
-        # self.add_custom_widget(self._wrapper)
-        self.add_button("test", label="Test")
-        button: NodeButton = self.get_widget("test")
-        button._button.clicked.connect(self.button_clicked)
-        path_input = self.add_input("Path", color=type_to_color("Path"))
-        path_input.add_accept_port_type(
-            port_name="Path", port_type=PortTypeEnum.OUT.value, node_type="masala.AssetBlockNode"
-        )
-
-        self.add_input("Metadata", color=type_to_color("dict"))
-
-        self.add_output("Path", color=type_to_color("Path"))
-        self.add_output("Metadata", color=type_to_color("dict"))
+    def add_execute_button(self):
+        self.add_button("execute")
+        nodebutton: NodeButton = self.get_widget("execute")
+        self.button = nodebutton._button
+        self.button.clicked.connect(self.button_clicked)
 
     def button_clicked(self):
-        port: Port = self.input(0)
+        port: MasalaPort = self.input(0)
         ports = port.connected_ports()
         if not ports:
             raise RuntimeError("Port not connected")
         port = ports[0]
-        print(port.value)
+
+    def add_input_ports(self):
+        for input in self.INPUTS:
+            self.add_input_port(input)
+
+    def add_input_port(self, input: Input):
+        self.add_input(input.name, color=type_to_color(input.typ))
+
+    def add_output_ports(self):
+        self.OUTPUTS.insert(0, Output(name="executed", typ="bool"))
+        for output in self.OUTPUTS:
+            self.add_output_port(output)
+
+    def add_output_port(self, output: Output):
+        self.add_output(output.name, color=type_to_color(output.typ))
+
+    def input(self, index) -> MasalaPort:
+        return super().input(index)
 
 
 def show_dialog(assetblock_registry: AssetBlockRegistry):
@@ -197,8 +207,8 @@ def show_dialog(assetblock_registry: AssetBlockRegistry):
     ab_node._widget.set_initial_path(
         Path(r"\\srv-bc-fs1\Norman\assetBlocksLibrary\lab\elderSprite\staticMesh\v004\elderSprite_staticMesh_v004.usda")
     )
-    func_node: FunctionNode = graph.create_node("masala.FunctionNode", pos=(500, 0))
-    func_node: FunctionNode = graph.create_node("masala.FunctionNode", pos=(500, 300))
+    func_node: MyFunctionNode = graph.create_node("masala.MyFunctionNode", pos=(500, 0))
+    # func_node: FunctionNode = graph.create_node("masala.FunctionNode", pos=(500, 300))
 
     graph_widget = graph.widget
     graph_widget.show()
