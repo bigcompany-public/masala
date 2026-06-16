@@ -73,13 +73,16 @@ class AssetBlockWidget(QWidget):
         self.version_combobox.blockSignals(False)
         self.version_combobox.setCurrentIndex(self.version_combobox.count() - 1)
 
-    def get_selected_path(self) -> Path:
+    def get_selected_path(self) -> Path | None:
         return self.version_combobox.currentData()
 
     def browse_button_clicked(self):
         path = self.show_file_dialog()
         if not path:
             return
+        self.update_all_paths(path)
+
+    def update_all_paths(self, path: Path):
         paths = self.get_all_paths(path)
         self.update_items(paths)
         self.set_path_index(path)
@@ -134,15 +137,20 @@ class AssetBlockWidget(QWidget):
 class AssetBlockWidgetWrapper(NodeBaseWidget):
     def __init__(self, parent, assetblock_node: AssetBlockNode):
         super().__init__(parent, label="Path")
+        self.set_name("path")  # A property must be set for ctrl+c ctrl+v to work
         self.assetblock_node = assetblock_node
         self._widget = AssetBlockWidget(assetblock_node=assetblock_node)
         self.set_custom_widget(self._widget)
 
     def get_value(self):
-        return "hello world"
+        value = self._widget.get_selected_path()
+        value = value.as_posix() if value else ""
+        return value
 
     def set_value(self, value):
-        return "hello world"
+        if not value:
+            return
+        self._widget.update_all_paths(Path(value))
 
 
 class AssetBlockNode(BaseNode):
@@ -195,6 +203,7 @@ class FunctionNode(BaseNode):
     def add_execute_button(self):
         self.add_button("execute")
         nodebutton: NodeButton = self.get_widget("execute")
+        self.model.__dict__["execute"] = "placeholder"  # The button needs a property so it can be saved & copy pasted
         self.button = nodebutton._button
         self.button.clicked.connect(self.button_clicked)
 
