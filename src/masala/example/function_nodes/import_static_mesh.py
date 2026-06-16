@@ -1,12 +1,13 @@
 from pathlib import Path
 
-from masala.api import FunctionNodeDescription, Input
+from masala.api import FunctionNodeDescription, Input, Output
 
 
 def callback(path: Path, metadata: dict | None = None, other: bool = True):
     print("#" * 30)
     print(path)
     print(metadata)
+    return ["juj", "loul"]
 
 
 import_static_mesh = FunctionNodeDescription(
@@ -14,8 +15,9 @@ import_static_mesh = FunctionNodeDescription(
     label="Import Static Mesh",
     callback=callback,
     inputs=[
-        Input(kwarg="path", label="Path", typ="Path", mandatory=True),
+        Input(kwarg="path", label="Path", typ="Path", mandatory=False),
         Input(kwarg="metadata", label="Metadata", typ="dict", mandatory=False),
         Input(kwarg="other", label="Test", typ="bool", mandatory=False),
     ],
+    outputs=[Output(label="Main Group", typ="str"), Output(label="Geometries", typ="list")],
 )

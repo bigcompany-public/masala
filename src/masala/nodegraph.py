@@ -200,14 +200,32 @@ class FunctionNode(BaseNode):
 
     def button_clicked(self):
         try:
-            kwargs = self.get_kwargs()
-            self.FUNCTION_DESCRIPTION.callback(kwargs)
-            self.set_color(*hex_to_tuple("#032C03"))
-            self.executed_port.value = True
+            self.run_callback()
         except:
             self.set_color(*hex_to_tuple("#310404"))
             self.executed_port.value = False
             raise
+
+    def run_callback(self):
+        kwargs = self.get_kwargs()
+        result = self.FUNCTION_DESCRIPTION.callback(kwargs)
+        self.update_output_port_values(result)
+        self.set_color(*hex_to_tuple("#032C03"))
+
+    def update_output_port_values(self, result: tuple | list):
+        self.executed_port.value = True
+        num_ports = len(self.output_ports())
+        if num_ports == 1:
+            return
+
+        if not (isinstance(result, list) or isinstance(result, tuple)):
+            raise TypeError("Function should return a list or a tuple of objects")
+        if len(result) != num_ports - 1:
+            raise IndexError("Mismatch between number of ports and number of returned objects")
+        for i, port in enumerate(self.output_ports()):
+            if i == 0:
+                continue
+            port.value = result[i - 1]
 
     def get_kwargs(self) -> dict[str, Any]:
         kwargs = {}
