@@ -13,5 +13,9 @@ import_static_mesh = FunctionNodeDescription(
     name="StaticMeshImport",
     label="Import Static Mesh",
     callback=callback,
-    inputs=[Input(label="path", typ="Path", mandatory=True), Input(label="metadata", typ="dict", mandatory=False)],
+    inputs=[
+        Input(label="path", typ="Path", mandatory=True),
+        Input(label="metadata", typ="dict", mandatory=False),
+        Input(label="test", typ="bool", mandatory=False),
+    ],
 )
