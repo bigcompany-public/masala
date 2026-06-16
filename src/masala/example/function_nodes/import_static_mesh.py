@@ -1,13 +1,17 @@
 from pathlib import Path
 
 from masala.api import FunctionNodeDescription, Input, Output
+from masala.example.codex import codex
 
 
 def callback(path: Path, metadata: dict | None = None, other: bool = True):
-    print("#" * 30)
-    print(path)
-    print(metadata)
-    return ["juj", "loul"]
+    fields = codex.get_fields(path)
+    group = f"grp_{fields['asset']}"
+    geometries = ["head", "arm", "leg"]
+    if fields["version"] == "004":
+        geometries += ["mouth", "hand", "foot"]
+    geometries = [f"{fields['asset']}_{geo}" for geo in geometries]
+    return [group, geometries]
 
 
 import_static_mesh = FunctionNodeDescription(

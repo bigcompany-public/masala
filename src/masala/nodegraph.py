@@ -139,10 +139,10 @@ class AssetBlockWidgetWrapper(NodeBaseWidget):
         self.set_custom_widget(self._widget)
 
     def get_value(self):
-        return ""
+        return "hello world"
 
     def set_value(self, value):
-        return ""
+        return "hello world"
 
 
 class AssetBlockNode(BaseNode):
@@ -208,7 +208,7 @@ class FunctionNode(BaseNode):
 
     def run_callback(self):
         kwargs = self.get_kwargs()
-        result = self.FUNCTION_DESCRIPTION.callback(kwargs)
+        result = self.FUNCTION_DESCRIPTION.callback(**kwargs)
         self.update_output_port_values(result)
         self.set_color(*hex_to_tuple("#032C03"))
 
@@ -242,8 +242,9 @@ class FunctionNode(BaseNode):
             connected_port = connected_ports[0]
 
             # Check port declared type
-            if connected_port.output_description.typ != port.input_description.typ:
-                raise TypeError(f"Type mismatch between {port} and {connected_port}")
+            if port.input_description.typ.lower() != "any":
+                if connected_port.output_description.typ != port.input_description.typ:
+                    raise TypeError(f"Type mismatch between {port} and {connected_port}")
 
             # Check value
             if connected_port.value == NOT_SET:
@@ -262,12 +263,13 @@ class FunctionNode(BaseNode):
         port.input_description = input
 
     def add_output_ports(self):
-        self.FUNCTION_DESCRIPTION.outputs.insert(0, Output(label="Executed", typ="bool"))
-        for output in self.FUNCTION_DESCRIPTION.outputs:
+        outputs = self.FUNCTION_DESCRIPTION.outputs.copy()
+        outputs.insert(0, Output(label="Executed", typ="bool"))
+        for output in outputs:
             self.add_output_port(output)
 
     def add_output_port(self, output: Output):
-        port: MasalaOutputPort = self.add_output(output.label, color=type_to_color(output.typ))  # type: ignore
+        port: MasalaOutputPort = self.add_output(name=output.label, color=type_to_color(output.typ))  # type: ignore
         port.output_description = output
         port.value = NOT_SET
 
