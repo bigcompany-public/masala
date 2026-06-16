@@ -3,7 +3,7 @@ from pathlib import Path
 from masala.api import FunctionNodeDescription, Input
 
 
-def callback(path: Path, metadata: dict | None = None):
+def callback(path: Path, metadata: dict | None = None, other: bool = True):
     print("#" * 30)
     print(path)
     print(metadata)
@@ -14,8 +14,8 @@ import_static_mesh = FunctionNodeDescription(
     label="Import Static Mesh",
     callback=callback,
     inputs=[
-        Input(label="path", typ="Path", mandatory=True),
-        Input(label="metadata", typ="dict", mandatory=False),
-        Input(label="test", typ="bool", mandatory=False),
+        Input(kwarg="path", label="Path", typ="Path", mandatory=True),
+        Input(kwarg="metadata", label="Metadata", typ="dict", mandatory=False),
+        Input(kwarg="other", label="Test", typ="bool", mandatory=False),
     ],
 )

@@ -168,6 +168,7 @@ class AssetBlockRegistry:
 
 @dataclass
 class Input:
+    kwarg: str
     label: str
     typ: str
     mandatory: bool = False
