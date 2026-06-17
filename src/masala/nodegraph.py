@@ -15,8 +15,36 @@ NOT_SET = "NOT SET"
 
 
 def type_to_color(typ: str) -> tuple[int, int, int]:
-    mapping = {"Path": "#00FFDD", "dict": "#3CFF00", "bool": "#58608F"}
-    color = mapping.get(typ, "#FFFFFF")
+    colors = [
+        "#1f78b4",
+        "#ff7f0e",
+        "#d62728",
+        "#2ca02c",
+        "#9467bd",
+        "#17becf",
+        "#e377c2",
+        "#8c564b",
+        "#bcbd22",
+        "#e6550d",
+        "#393b79",
+        "#7b4173",
+        "#31a354",
+        "#ff9896",
+        "#56a5d4",
+        "#8c6d31",
+    ]
+    mapping = {
+        "str": "#1f78b4",
+        "int": "#ff7f0e",
+        "float": "#e6550d",
+        "bool": "#393b79",
+        "list": "#2ca02c",
+        "tuple": "#31a354",
+        "set": "#bcbd22",
+        "dict": "#9467bd",
+        "Path": "#56a5d4",
+    }
+    color = mapping.get(typ, "#ACACAC")
     return hex_to_tuple(color)
 
 
@@ -270,6 +298,13 @@ class FunctionNode(BaseNode):
     def add_input_port(self, input: Input):
         port: MasalaInputPort = self.add_input(input.label, color=type_to_color(input.typ))  # type: ignore
         port.input_description = input
+
+    def on_input_connected(self, in_port: MasalaInputPort, out_port: MasalaOutputPort):
+        input_type = in_port.input_description.typ
+        output_type = out_port.output_description.typ
+
+        if input_type.lower() != output_type.lower() and input_type.lower() != "any":
+            in_port.disconnect_from(out_port)
 
     def add_output_ports(self):
         outputs = self.FUNCTION_DESCRIPTION.outputs.copy()
