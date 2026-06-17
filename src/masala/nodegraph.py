@@ -83,12 +83,15 @@ class AssetBlockWidget(QWidget):
 
     def setup_signals(self):
         self.browse_button.clicked.connect(self.browse_button_clicked)
+        self.update_button.clicked.connect(self.update_button_clicked)
         self.version_combobox.currentIndexChanged.connect(self.version_index_changed)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         self.browse_button = QPushButton("Browse")
         layout.addWidget(self.browse_button)
+        self.update_button = QPushButton("Update")
+        layout.addWidget(self.update_button)
         self.version_combobox = QComboBox()
         layout.addWidget(self.version_combobox)
 
@@ -104,6 +107,12 @@ class AssetBlockWidget(QWidget):
 
     def browse_button_clicked(self):
         path = self.show_file_dialog()
+        if not path:
+            return
+        self.update_all_paths(path)
+
+    def update_button_clicked(self):
+        path = self.get_selected_path()
         if not path:
             return
         self.update_all_paths(path)
@@ -151,6 +160,8 @@ class AssetBlockWidget(QWidget):
 
         # Update path output port value
         self.assetblock_node.path_port.value = path
+        if not path:
+            return
 
         # Update metadata output port value
         metadata_path = get_metadata_path(path)
@@ -162,7 +173,7 @@ class AssetBlockWidget(QWidget):
 
 class AssetBlockWidgetWrapper(NodeBaseWidget):
     def __init__(self, parent, assetblock_node: AssetBlockNode):
-        super().__init__(parent, label="Path")
+        super().__init__(parent)
         self.set_name("path")  # A property must be set for ctrl+c ctrl+v to work
         self.assetblock_node = assetblock_node
         self._widget = AssetBlockWidget(assetblock_node=assetblock_node)
@@ -195,6 +206,7 @@ class AssetBlockNode(BaseNode):
         self._wrapper = AssetBlockWidgetWrapper(parent=self.view, assetblock_node=self)
         self._widget = self._wrapper._widget
         self.add_custom_widget(self._wrapper)
+        self._widget.update_button.setVisible(False)
         self.setup_ports()
 
     def output(self, index) -> MasalaOutputPort:
@@ -222,14 +234,11 @@ class AssetBlockNode(BaseNode):
 
     def on_input_connected(self, in_port: MasalaInputPort, out_port: MasalaOutputPort):
         self._widget.browse_button.setHidden(True)
-        fields: dict = out_port.value
-        if fields.get("version"):
-            fields.pop("version")
-        path = self.ASSETBLOCK.convention.get_last_path(fields)  # type: ignore
-        self._widget.update_all_paths(path)
+        self._widget.update_button.setHidden(False)
 
     def on_input_disconnected(self, in_port, out_port):
         self._widget.browse_button.setHidden(False)
+        self._widget.update_button.setHidden(True)
 
 
 class FunctionNode(BaseNode):
