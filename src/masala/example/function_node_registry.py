@@ -1,5 +1,6 @@
 from masala.example.function_nodes.apply_rig import apply_rig
 from masala.example.function_nodes.assign_materials import assign_materials
+from masala.example.function_nodes.get_asset_fields import get_asset_fields
 from masala.example.function_nodes.import_materials import import_materials
 from masala.example.function_nodes.import_rig import import_rig
 from masala.example.function_nodes.import_static_mesh import import_static_mesh
@@ -12,4 +13,5 @@ function_node_descriptions = [
     import_materials,
     apply_rig,
     import_rig,
+    get_asset_fields,
 ]
