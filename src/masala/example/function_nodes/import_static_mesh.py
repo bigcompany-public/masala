@@ -20,8 +20,6 @@ import_static_mesh = FunctionNodeDescription(
     callback=callback,
     inputs=[
         Input(kwarg="path", label="Path", typ="Path", mandatory=False),
-        Input(kwarg="metadata", label="Metadata", typ="dict", mandatory=False),
-        Input(kwarg="other", label="Test", typ="bool", mandatory=False),
     ],
     outputs=[Output(label="Main Group", typ="str"), Output(label="Geometries", typ="list")],
 )
