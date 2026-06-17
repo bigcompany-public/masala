@@ -2,7 +2,7 @@ from masala.api import FunctionNodeDescription, Output
 
 
 def callback() -> list[dict[str, str]]:
-    return [{"asset": "elderSprite", "type": "chr"}]
+    return [{"asset": "elderSprite", "type": "lab"}]
 
 
 get_asset_fields = FunctionNodeDescription(

@@ -212,12 +212,24 @@ class AssetBlockNode(BaseNode):
         return self.output(1)
 
     def setup_ports(self):
+        self.add_input("Fields", color=type_to_color("dict"))
         self.add_output("Path", color=type_to_color("Path"))
         self.add_output("Metadata", color=type_to_color("dict"))
         self.path_port.output_description = Output("Path", "Path")
         self.path_port.value = NOT_SET
         self.metadata_port.output_description = Output("Metadata", "dict")
         self.metadata_port.value = NOT_SET
+
+    def on_input_connected(self, in_port: MasalaInputPort, out_port: MasalaOutputPort):
+        self._widget.browse_button.setHidden(True)
+        fields: dict = out_port.value
+        if fields.get("version"):
+            fields.pop("version")
+        path = self.ASSETBLOCK.convention.get_last_path(fields)  # type: ignore
+        self._widget.update_all_paths(path)
+
+    def on_input_disconnected(self, in_port, out_port):
+        self._widget.browse_button.setHidden(False)
 
 
 class FunctionNode(BaseNode):
@@ -236,6 +248,7 @@ class FunctionNode(BaseNode):
         nodebutton: NodeButton = self.get_widget("execute")
         self.model.__dict__["execute"] = "placeholder"  # The button needs a property so it can be saved & copy pasted
         self.button = nodebutton._button
+        self.button.setText("Run")
         self.button.clicked.connect(self.button_clicked)
 
     def button_clicked(self):

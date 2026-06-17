@@ -13,7 +13,7 @@ import_rig = FunctionNodeDescription(
     label="Import Rig",
     callback=callback,
     inputs=[
-        Input(kwarg="path", label="Path", typ="Path", mandatory=False),
+        Input(kwarg="path", label="Path", typ="Path", mandatory=True),
     ],
     outputs=[Output(label="Controllers", typ="list")],
 )
