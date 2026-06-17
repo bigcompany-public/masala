@@ -185,5 +185,5 @@ class FunctionNodeDescription:
     name: str
     label: str
     callback: Callable
-    inputs: list[Input]
+    inputs: list[Input] = field(default_factory=list[Input])
     outputs: list[Output] = field(default_factory=list[Output])

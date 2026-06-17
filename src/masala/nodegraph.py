@@ -356,7 +356,7 @@ class AssemblerGraph:
                 assetblock.name,
                 (AssetBlockNode,),
                 {
-                    "__identifier__": "masala.assetblocks",
+                    "__identifier__": "assetblocks",
                     "NODE_NAME": assetblock.label,
                     "ASSETBLOCK": assetblock,
                 },
@@ -368,7 +368,7 @@ class AssemblerGraph:
                 description.name,
                 (FunctionNode,),
                 {
-                    "__identifier__": "masala.functions",
+                    "__identifier__": "functions",
                     "NODE_NAME": description.label,
                     "FUNCTION_DESCRIPTION": description,
                 },
