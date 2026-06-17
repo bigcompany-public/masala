@@ -93,12 +93,10 @@ class AssetBlockWidget(QWidget):
         layout.addWidget(self.version_combobox)
 
     def update_items(self, paths: list[Path]):
-        self.version_combobox.blockSignals(True)
         self.version_combobox.clear()
         for path in paths:
             version = self.assetblock.convention.parse(path)["version"]
             self.version_combobox.addItem(version, path)
-        self.version_combobox.blockSignals(False)
         self.version_combobox.setCurrentIndex(self.version_combobox.count() - 1)
 
     def get_selected_path(self) -> Path | None:
