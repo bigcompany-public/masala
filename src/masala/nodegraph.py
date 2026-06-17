@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from NodeGraphQt import BaseNode, NodeBaseWidget, NodeGraph, Port
+from NodeGraphQt import BackdropNode, BaseNode, NodeBaseWidget, NodeGraph, Port
 from NodeGraphQt.widgets.node_widgets import NodeButton
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QApplication, QComboBox, QFileDialog, QPushButton, QVBoxLayout, QWidget
@@ -178,12 +178,17 @@ class AssetBlockWidgetWrapper(NodeBaseWidget):
     def set_value(self, value):
         if not value:
             return
+
+        # For some reason, set_value is called twice when loading a json file
+        # bypass set value process if it has already been done
+        if self._widget.version_combobox.count():
+            return
         self._widget.update_all_paths(Path(value))
 
 
 class AssetBlockNode(BaseNode):
-    __identifier__ = "masala"
-    NODE_NAME = "AssetBlock"
+    __identifier__ = "AssetBlock"
+    NODE_NAME = "AssetBlockNode"
     ASSETBLOCK: AssetBlock | None = None
 
     def __init__(self) -> None:
@@ -218,7 +223,7 @@ class AssetBlockNode(BaseNode):
 
 
 class FunctionNode(BaseNode):
-    __identifier__ = "masala"
+    __identifier__ = "Function"
     NODE_NAME = "FunctionNode"
     FUNCTION_DESCRIPTION: FunctionNodeDescription
 
@@ -334,50 +339,66 @@ class FunctionNode(BaseNode):
         return self.output(0)
 
 
-class AssemblerGraph:
+class AssemblerGraph(NodeGraph):
     def __init__(
         self, assetblock_registry: AssetBlockRegistry, function_node_descriptions: list[FunctionNodeDescription]
     ) -> None:
-        self.app = QApplication([])
+        super().__init__()
         self.assetblock_registry = assetblock_registry
         self.function_node_descriptions = function_node_descriptions
-        self.graph = NodeGraph()
         self.configure_hotkeys()
-        self.register_nodes()
+        self.register_assetbklock_nodes()
+        self.register_function_nodes()
+        self.register_other_nodes()
 
     def configure_hotkeys(self):
         hotkey_path = Path(__file__).parent / "hotkeys.json"
-        self.graph.set_context_menu_from_file(hotkey_path, "graph")
+        self.set_context_menu_from_file(hotkey_path, "graph")
 
-    def register_nodes(self):
-        all_nodes = []
+    def _register_builtin_nodes(self):
+        """Prevents backdrop node from being automatically registered"""
+        return
+
+    def register_assetbklock_nodes(self):
         for assetblock in self.assetblock_registry.assetblocks:
             new_class = type(
                 assetblock.name,
                 (AssetBlockNode,),
                 {
-                    "__identifier__": "assetblocks",
+                    "__identifier__": "AssetBlocks",
                     "NODE_NAME": assetblock.label,
                     "ASSETBLOCK": assetblock,
                 },
             )
-            all_nodes.append(new_class)
+            self.register_node(new_class)
 
+    def register_function_nodes(self):
         for description in self.function_node_descriptions:
             new_class = type(
                 description.name,
                 (FunctionNode,),
                 {
-                    "__identifier__": "functions",
+                    "__identifier__": "Functions",
                     "NODE_NAME": description.label,
                     "FUNCTION_DESCRIPTION": description,
                 },
             )
-            all_nodes.append(new_class)
+            self.register_node(new_class)
 
-        self.graph.register_nodes(all_nodes)
+    def register_other_nodes(self):
+        new_class = type(
+            "BackdropNode",
+            (BackdropNode,),
+            {
+                "__identifier__": "Other",
+                "NODE_NAME": "Backdrop",
+            },
+        )
+        self.register_node(new_class)
 
-    def show_dialog(self):
-        graph_widget = self.graph.widget
-        graph_widget.show()
-        self.app.exec_()
+
+def show_dialog(assetblock_registry: AssetBlockRegistry, function_node_descriptions: list[FunctionNodeDescription]):
+    app = QApplication([])
+    graph_widget = AssemblerGraph(assetblock_registry, function_node_descriptions)
+    graph_widget.show()
+    app.exec_()
