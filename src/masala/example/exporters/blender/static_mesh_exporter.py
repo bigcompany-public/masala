@@ -52,4 +52,6 @@ def meta() -> dict:
     return {"hello": "world"}
 
 
-exporter = Exporter(static_mesh, current_path_callback=get_path, export_callback=export, metadata_callback=meta)
+static_mesh_exporter = Exporter(
+    static_mesh, current_path_callback=get_path, export_callback=export, metadata_callback=meta
+)
