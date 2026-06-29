@@ -7,9 +7,11 @@ from typing import Any
 from NodeGraphQt import BackdropNode, BaseNode, NodeBaseWidget, NodeGraph, Port
 from NodeGraphQt.widgets.node_widgets import NodeButton
 from qtpy.QtGui import QColor
-from qtpy.QtWidgets import QApplication, QComboBox, QFileDialog, QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QComboBox, QFileDialog, QPushButton, QVBoxLayout, QWidget
 
 from masala.api import AssetBlock, AssetBlockRegistry, FunctionNodeDescription, Input, Output, get_metadata_path
+from masala.gui.container import ContainerDialog, ContainerWidget
+from masala.gui.utils import get_masala_assembler_icon, get_qt_app
 
 NOT_SET = "NOT SET"
 
@@ -418,7 +420,9 @@ class AssemblerGraph(NodeGraph):
 
 
 def show_dialog(assetblock_registry: AssetBlockRegistry, function_node_descriptions: list[FunctionNodeDescription]):
-    app = QApplication([])
+    app = get_qt_app()
     graph_widget = AssemblerGraph(assetblock_registry, function_node_descriptions)
-    graph_widget.show()
+    container = ContainerWidget(widget=graph_widget.widget, title="Masala Assembler", icon=get_masala_assembler_icon())
+    dialog = ContainerDialog(container=container)
+    dialog.show()
     app.exec_()
