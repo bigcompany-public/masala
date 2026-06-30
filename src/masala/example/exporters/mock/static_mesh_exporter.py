@@ -10,8 +10,8 @@ def get_path() -> Path:
 
 def export(path: Path):
     print(f"Writing placeholder file to {path}")
-    # path.parent.mkdir(exist_ok=True, parents=True)
-    # path.write_text("placeholder")
+    path.parent.mkdir(exist_ok=True, parents=True)
+    path.write_text("placeholder")
 
 
 def meta() -> dict:

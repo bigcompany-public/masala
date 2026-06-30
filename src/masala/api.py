@@ -91,27 +91,25 @@ class Exporter:
         return self.destination_path_callback(self)
 
     def export(self, raise_on_error=True):
-        """Run the export callback while capturing the stdout, counting time and handling errors"""
-        error = None
         with CaptureStdout() as stdout:
             start_time = time.perf_counter()
+
             try:
                 self._monitored_export()
-            except Exception as e:
-                print(traceback.format_exc().strip())
-                error = e
-
-            end_time = time.perf_counter()
-            total_time = end_time - start_time
-            if not error:
-                print(f"Export took {total_time:.4f} seconds")
+            except Exception:
+                elapsed = time.perf_counter() - start_time
+                self.error = True
+                print(f"Export failed after {elapsed:.4f} seconds")
+                if raise_on_error:
+                    raise
+                else:
+                    print(traceback.format_exc())
             else:
-                print(f"Export failed after {total_time:.4f} seconds")
-
-        self.logs = stdout.text()
-        self.error = bool(error)
-        if error and raise_on_error:
-            raise error from None
+                elapsed = time.perf_counter() - start_time
+                self.error = False
+                print(f"Export took {elapsed:.4f} seconds")
+            finally:
+                self.logs = stdout.text()
 
     def _monitored_export(self):
         path = self.get_destination_path()
