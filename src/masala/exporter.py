@@ -274,10 +274,19 @@ class ExporterWidget(QFrame):
         self.masala_exporter_widget.run_selected_exporters()
 
     def update_selection(self):
-        """Ensure this Criterion widget is selected when export is triggered."""
+        """Ensure this Exporter widget is selected when export is triggered."""
         if self not in self.masala_exporter_widget.selected_exporter_widgets:
             self.table.clearSelection()
             self.table.selectRow(self.current_row)
+
+    def run(self):
+        """Trigger execution of the exporter and refresh related views."""
+        self.exporter.export(raise_on_error=False)
+        self.update_status_label()
+        self.update_status_column()
+        self.update_stdout_text()
+        self.update_assistant_widget()
+        self.spicy_qc_widget.update_visible_columns()
 
 
 class ExportersTableWidget(QTableWidget):
@@ -371,6 +380,20 @@ class MasalaExporterWidget(QWidget):
 
         # Update status
         exporter_widget.update_status_column()
+
+    @property
+    def selected_exporter_widgets(self) -> list[ExporterWidget]:
+        """Return the currently selected exporter widgets from the table."""
+        widgets = []
+        for item in self.table.selectedItems():
+            if isinstance(item, ExporterTableItem):
+                widgets.append(item.exporter_widget)
+        return widgets
+
+    def run_selected_exporters(self):
+        """Verify all currently selected exporters in the table."""
+        for exporter_widget in self.selected_exporter_widgets:
+            exporter_widget.run()
 
 
 def show_dialog(exporters: list[Exporter]):

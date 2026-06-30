@@ -3,11 +3,15 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
+import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
 from lucent import Codex, Convention
+
+from masala.stdout import CaptureStdout
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +74,8 @@ class Exporter:
         self.export_callback = export_callback
         self.metadata_callback = metadata_callback
         self.variable_fields = variable_fields if variable_fields is not None else ["version", "description"]
+        self.logs: str = ""
+        self.error: bool = False
 
     def get_current_path(self) -> Path:
         return self.current_path_callback()
@@ -84,7 +90,30 @@ class Exporter:
     def get_destination_path(self) -> Path:
         return self.destination_path_callback(self)
 
-    def export(self):
+    def export(self, raise_on_error=True):
+        """Run the export callback while capturing the stdout, counting time and handling errors"""
+        error = None
+        with CaptureStdout() as stdout:
+            start_time = time.perf_counter()
+            try:
+                self._monitored_export()
+            except Exception as e:
+                print(traceback.format_exc().strip())
+                error = e
+
+            end_time = time.perf_counter()
+            total_time = end_time - start_time
+            if not error:
+                print(f"Export took {total_time:.4f} seconds")
+            else:
+                print(f"Export failed after {total_time:.4f} seconds")
+
+        self.logs = stdout.text()
+        self.error = bool(error)
+        if error and raise_on_error:
+            raise error from None
+
+    def _monitored_export(self):
         path = self.get_destination_path()
         logger.info(f"Exporting {self.assetblock.label} to {path}")
         path.parent.mkdir(exist_ok=True, parents=True)
