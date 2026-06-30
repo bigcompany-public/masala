@@ -400,8 +400,13 @@ class MasalaExporterWidget(QWidget):
         layout.addWidget(title)
 
         # Exporters
+        frame = QFrame()
+        frame.setProperty("depth", "0")
+        layout.addWidget(frame)
+        frame_layout = QVBoxLayout(frame)
+        frame_layout.setContentsMargins(1, 1, 1, 1)
         self.table = ExportersTableWidget(self)
-        layout.addWidget(self.table)
+        frame_layout.addWidget(self.table)
         for i, exporter in enumerate(self.exporters):
             self.add_exporter_widget(i, exporter)
 
