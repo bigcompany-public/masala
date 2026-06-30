@@ -3,12 +3,13 @@ from __future__ import annotations
 from enum import StrEnum, auto
 
 import qtawesome
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QEvent, Qt
 from qtpy.QtWidgets import (
     QAbstractItemView,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QPlainTextEdit,
     QPushButton,
     QScrollArea,
@@ -24,7 +25,7 @@ from masala.gui.container import ContainerDialog, ContainerWidget
 from masala.gui.utils import format_widgets, get_masala_exporter_icon, get_qt_app, get_theme
 
 THEME = get_theme()
-FRAME_HEIGHT = 300
+FRAME_HEIGHT = 200
 
 
 class ExporterStatus(StrEnum):
@@ -33,6 +34,53 @@ class ExporterStatus(StrEnum):
     WAITING = auto()
     OK = auto()
     ERROR = auto()
+
+
+class TableMenu(QMenu):
+    """Context menu shown on right-click within the exporter table."""
+
+    def __init__(self, table: ExportersTableWidget):
+        """Create a table context menu for the given table widget."""
+        super().__init__(table)
+        self.table = table
+        self.masala_exporter_widget = table.masala_exporter_widget
+
+        # Collapse all
+        action = self.addAction("Collapse All")
+        action.setIcon(qtawesome.icon("mdi.arrow-collapse-vertical", color=THEME["icon_color"]))
+        action.triggered.connect(self.collapse_all)
+
+        # Sort by name
+        action = self.addAction("Sort By Name")
+        action.setIcon(qtawesome.icon("fa5s.sort-alpha-down", color=THEME["icon_color"]))
+        action.triggered.connect(self.sort_by_name)
+
+        # Sort by status
+        action = self.addAction("Sort By Status")
+        action.setIcon(qtawesome.icon("mdi.sort-bool-ascending-variant", color=THEME["icon_color"]))
+        action.triggered.connect(self.sort_by_status)
+
+        # Disable sorting
+        action = self.addAction("Disable Sorting")
+        action.setIcon(qtawesome.icon("mdi6.sort-variant-off", color=THEME["icon_color"]))
+        action.triggered.connect(self.sort_by_index)
+
+    def collapse_all(self):
+        """Collapse all expandable exporter sections in the table."""
+        for exporter_widget in self.masala_exporter_widget.exporter_widgets:
+            exporter_widget.toggle_logs_button.collapse_frame()
+
+    def sort_by_status(self):
+        """Sort table rows by exporter status."""
+        self.table.sortByColumn(self.table._status_column_index, Qt.SortOrder.AscendingOrder)
+
+    def sort_by_name(self):
+        """Sort table rows by exporter label."""
+        self.table.sortByColumn(self.table._label_column_index, Qt.SortOrder.AscendingOrder)
+
+    def sort_by_index(self):
+        """Restore the original table order by index."""
+        self.table.sortByColumn(self.table._index_column_index, Qt.SortOrder.AscendingOrder)
 
 
 class ToggleAreaButton(QPushButton):
@@ -282,11 +330,20 @@ class ExporterWidget(QFrame):
     def run(self):
         """Trigger execution of the exporter and refresh related views."""
         self.exporter.export(raise_on_error=False)
+        self.update_status()
+        self.update_stdout_text()
+
+    def update_status(self):
+        if self.exporter.error:
+            self.status = ExporterStatus.ERROR
+        else:
+            self.status = ExporterStatus.OK
         self.update_status_label()
         self.update_status_column()
-        self.update_stdout_text()
-        self.update_assistant_widget()
-        self.spicy_qc_widget.update_visible_columns()
+
+    def update_stdout_text(self):
+        """Refresh the log text displayed in the log panel."""
+        self.stdout_view.setPlainText(self.exporter.logs)
 
 
 class ExportersTableWidget(QTableWidget):
@@ -316,6 +373,11 @@ class ExportersTableWidget(QTableWidget):
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         for i in range(len(self._columns) - 1):
             self.setColumnHidden(i, True)
+
+    def contextMenuEvent(self, event: QEvent):
+        """Show the table context menu when the user right-clicks."""
+        menu = TableMenu(self)
+        menu.exec_(event.globalPos())  # type: ignore
 
 
 class MasalaExporterWidget(QWidget):
