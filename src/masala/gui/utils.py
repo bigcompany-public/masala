@@ -403,6 +403,7 @@ def get_stylesheet(theme: str = "dark"):
         padding:3px;
         color:{colors["text_color"]};
         background-color:{colors["bg_one"]};
+        font-family: Consolas;
     }}
     QPlainTextEdit:hover {{
         border-color:{colors["active"]};
