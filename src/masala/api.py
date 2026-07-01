@@ -61,7 +61,7 @@ class Exporter:
         self,
         assetblock: AssetBlock,
         current_path_callback: Callable[..., Path],
-        export_callback: Callable[[Path], None],
+        export_callback: Callable[[Path], dict | None],
         destination_path_callback: Callable[[Exporter], Path] | None = None,
         metadata_callback: Callable[..., dict] | None = None,
         variable_fields: list[str] | None = None,
@@ -70,12 +70,19 @@ class Exporter:
         self.convention = self.assetblock.convention
         self.codex = self.assetblock.codex
         self.current_path_callback = current_path_callback
-        self.destination_path_callback = destination_path_callback or default_destination_path_callback
+        self.destination_path_callback = (
+            destination_path_callback or default_destination_path_callback
+        )
         self.export_callback = export_callback
         self.metadata_callback = metadata_callback
-        self.variable_fields = variable_fields if variable_fields is not None else ["version", "description"]
+        self.variable_fields = (
+            variable_fields
+            if variable_fields is not None
+            else ["version", "description"]
+        )
         self.logs: str = ""
         self.error: bool = False
+        self.result: dict | None = None
 
     def get_current_path(self) -> Path:
         return self.current_path_callback()
@@ -115,7 +122,7 @@ class Exporter:
         path = self.get_destination_path()
         logger.info(f"Exporting {self.assetblock.label} to {path}")
         path.parent.mkdir(exist_ok=True, parents=True)
-        self.export_callback(path)
+        self.result = self.export_callback(path)
         self.ensure_path(path)
         metadata_path = get_metadata_path(path)
         self.write_metadata(metadata_path)
@@ -124,7 +131,9 @@ class Exporter:
         metadata = {
             "user": os.environ["USERNAME"],
             "computer": os.environ["COMPUTERNAME"],
-            "date": "{year}_{month}_{day}_{hour}_{min}_{sec}".format(**self.codex.get_datetime_fields()),
+            "date": "{year}_{month}_{day}_{hour}_{min}_{sec}".format(
+                **self.codex.get_datetime_fields()
+            ),
         }
         return metadata
 
@@ -135,6 +144,8 @@ class Exporter:
 
     def get_metadata(self) -> dict:
         metadata = self.get_base_metadata()
+        if self.result and not self.metadata_callback:
+            metadata.update(self.result)
         metadata.update(self.get_extra_metadata())
         return metadata
 
@@ -156,14 +167,20 @@ class AssetBlockRegistry:
 
     def register_assetblock(self, assetblock: AssetBlock):
         if assetblock.name in self.get_assetblock_names():
-            raise DuplicateAssetBlockError(f'Multiple AssetBlocks with name "{assetblock.name}" cannot be registered')
+            raise DuplicateAssetBlockError(
+                f'Multiple AssetBlocks with name "{assetblock.name}" cannot be registered'
+            )
         if assetblock.label in self.get_assetblock_labels():
-            raise DuplicateAssetBlockError(f'Multiple AssetBlocks with label "{assetblock.label}" cannot be registered')
+            raise DuplicateAssetBlockError(
+                f'Multiple AssetBlocks with label "{assetblock.label}" cannot be registered'
+            )
         self.assetblocks.append(assetblock)
 
     def __repr__(self) -> str:
         count = len(self.assetblocks)
-        return f"{self.__class__.__name__}({count} AssetBlock{'s' if count > 1 else ''})"
+        return (
+            f"{self.__class__.__name__}({count} AssetBlock{'s' if count > 1 else ''})"
+        )
 
     def __iter__(self):
         return iter(self.assetblocks)
@@ -175,13 +192,17 @@ class AssetBlockRegistry:
         return [assetblock.label for assetblock in self.assetblocks]
 
     def get_assetblock_by_name(self, name: str) -> AssetBlock:
-        assetblocks = [assetblock for assetblock in self.assetblocks if assetblock.name == name]
+        assetblocks = [
+            assetblock for assetblock in self.assetblocks if assetblock.name == name
+        ]
         if not assetblocks:
             raise AssetBlockNotFoundError(f'AssetBlock name not found : "{name}"')
         return assetblocks[0]
 
     def get_assetblock_by_label(self, label: str) -> AssetBlock:
-        assetblocks = [assetblock for assetblock in self.assetblocks if assetblock.label == label]
+        assetblocks = [
+            assetblock for assetblock in self.assetblocks if assetblock.label == label
+        ]
         if not assetblocks:
             raise AssetBlockNotFoundError(f'AssetBlock label not found : "{label}"')
         return assetblocks[0]
