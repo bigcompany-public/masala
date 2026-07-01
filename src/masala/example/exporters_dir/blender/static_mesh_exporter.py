@@ -3,7 +3,7 @@ from pathlib import Path
 import bpy
 
 from masala.api import Exporter
-from masala.example.asset_blocks.staticmesh import static_mesh
+from masala.example.assetblocks_dir.staticmesh import static_mesh
 from masala.example.codex import codex
 
 

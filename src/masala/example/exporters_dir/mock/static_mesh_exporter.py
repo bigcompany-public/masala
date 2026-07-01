@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from masala.api import Exporter
-from masala.example.asset_blocks.staticmesh import static_mesh
+from masala.example.assetblocks_dir.staticmesh import static_mesh
 
 
 def get_path() -> Path:

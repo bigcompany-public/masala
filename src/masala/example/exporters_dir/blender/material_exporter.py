@@ -10,7 +10,7 @@ import bpy
 from bpy.types import Collection, Material, Mesh, Object
 
 from masala.api import Exporter
-from masala.example.asset_blocks.staticmesh import static_mesh
+from masala.example.assetblocks_dir.staticmesh import static_mesh
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
