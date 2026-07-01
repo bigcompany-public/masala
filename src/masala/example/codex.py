@@ -40,6 +40,10 @@ class MasalaConventions(Conventions):
         fixed_fields={"assetBlock": "rig", "extension": "blend"},
     )
 
+    # Blender
+    blender_asset_main_collection = Convention("Scene/{asset}")
+    blender_asset_meshes_collection = Convention("{@blender_asset_main_collection}/staticMesh")
+
 
 class MasalaCodex(Codex):
     convs: MasalaConventions = MasalaConventions()
