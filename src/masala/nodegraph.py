@@ -9,44 +9,42 @@ from NodeGraphQt.widgets.node_widgets import NodeButton
 from qtpy.QtGui import QColor
 from qtpy.QtWidgets import QComboBox, QFileDialog, QPushButton, QVBoxLayout, QWidget
 
-from masala.api import AssetBlock, AssetBlockRegistry, FunctionNodeDescription, Input, Output, get_metadata_path
+from masala.api import (
+    AssetBlock,
+    AssetBlockRegistry,
+    Input,
+    NodeDescription,
+    NodeState,
+    Operator,
+    Output,
+    PortType,
+    get_metadata_path,
+)
 from masala.gui.container import ContainerDialog, ContainerWidget
 from masala.gui.utils import get_masala_assembler_icon, get_qt_app
 
 NOT_SET = "NOT SET"
 
+STATE_COLORS = {
+    NodeState.EXECUTED: "#032C03",
+    NodeState.FAILED: "#310404",
+}
 
-def type_to_color(typ: str) -> tuple[int, int, int]:
-    colors = [
-        "#1f78b4",
-        "#ff7f0e",
-        "#d62728",
-        "#2ca02c",
-        "#9467bd",
-        "#17becf",
-        "#e377c2",
-        "#8c564b",
-        "#bcbd22",
-        "#e6550d",
-        "#393b79",
-        "#7b4173",
-        "#31a354",
-        "#ff9896",
-        "#56a5d4",
-        "#8c6d31",
-    ]
+
+def type_to_color(port_type: PortType) -> tuple[int, int, int]:
     mapping = {
-        "str": "#1f78b4",
-        "int": "#ff7f0e",
-        "float": "#e6550d",
-        "bool": "#393b79",
-        "list": "#2ca02c",
-        "tuple": "#31a354",
-        "set": "#bcbd22",
-        "dict": "#9467bd",
-        "Path": "#56a5d4",
+        str: "#1f78b4",
+        int: "#ff7f0e",
+        float: "#e6550d",
+        bool: "#393b79",
+        list: "#2ca02c",
+        tuple: "#31a354",
+        set: "#bcbd22",
+        dict: "#9467bd",
+        Path: "#56a5d4",
     }
-    color = mapping.get(typ, "#ACACAC")
+    base_type = port_type.origin or port_type.typ
+    color = mapping.get(base_type, "#ACACAC")
     return hex_to_tuple(color)
 
 
@@ -69,11 +67,81 @@ class MasalaInputPort(Port):
         self.input_description: Input
 
 
-class AssetBlockWidget(QWidget):
-    """
-    Custom widget to be embedded inside a node.
-    """
+class MasalaNode(BaseNode):
+    NODE_DESCRIPTION: NodeDescription
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._state = NodeState.UNSET
+        self.add_input_ports()
+        self.add_output_ports()
+
+    @property
+    def state(self) -> NodeState:
+        return self._state
+
+    @property
+    def is_executed(self) -> bool:
+        return self._state is NodeState.EXECUTED
+
+    def set_state(self, state: NodeState) -> None:
+        self._state = state
+        color = STATE_COLORS.get(state)
+        if color:
+            self.set_color(*hex_to_tuple(color))
+
+    def add_input_ports(self) -> None:
+        for input_description in self.NODE_DESCRIPTION.inputs:
+            self.add_typed_input(input_description)
+
+    def add_output_ports(self) -> None:
+        for output_description in self.NODE_DESCRIPTION.outputs:
+            self.add_typed_output(output_description)
+
+    def add_typed_input(self, input_description: Input) -> MasalaInputPort:
+        port = self.add_input(input_description.label, color=type_to_color(input_description.typ))
+        port.input_description = input_description
+        return port
+
+    def add_typed_output(self, output_description: Output) -> MasalaOutputPort:
+        port = self.add_output(output_description.label, color=type_to_color(output_description.typ))
+        port.output_description = output_description
+        port.value = NOT_SET
+        return port
+
+    # NodeGraphQt.Port objects are plain Port instances at runtime; swapping
+    # __class__ here is a lightweight trick so type checkers/autocomplete see
+    # MasalaInputPort/MasalaOutputPort without forking NodeGraphQt.
+    def add_input(self, *args, **kwargs) -> MasalaInputPort:
+        port = super().add_input(*args, **kwargs)
+        port.__class__ = MasalaInputPort
+        return port
+
+    def add_output(self, *args, **kwargs) -> MasalaOutputPort:
+        port = super().add_output(*args, **kwargs)
+        port.__class__ = MasalaOutputPort
+        return port
+
+    def input(self, index) -> MasalaInputPort:
+        return super().input(index)
+
+    def inputs(self) -> dict[str, MasalaInputPort]:
+        return super().inputs()
+
+    def input_ports(self) -> list[MasalaInputPort]:
+        return super().input_ports()
+
+    def output(self, index) -> MasalaOutputPort:
+        return super().output(index)
+
+    def outputs(self) -> dict[str, MasalaOutputPort]:
+        return super().outputs()
+
+    def output_ports(self) -> list[MasalaOutputPort]:
+        return super().output_ports()
+
+
+class AssetBlockWidget(QWidget):
     def __init__(self, assetblock_node: AssetBlockNode):
         super().__init__()
         if not assetblock_node.ASSETBLOCK:
@@ -141,16 +209,13 @@ class AssetBlockWidget(QWidget):
         return {}
 
     def show_file_dialog(self) -> Path | None:
-        # Get root dir
         conv = self.assetblock.convention
         pattern = conv.glob_pattern(self.get_context_fields())
         pattern = Path(pattern).as_posix()
         root_path = pattern.split("*", 1)[0].rsplit("/", 1)[0]
 
-        # Get extension
         extension = conv.fixed_fields.get("extension") or "*"
 
-        # Show dialog
         path = QFileDialog.getOpenFileName(
             parent=None, dir=root_path, caption="Pick Asset Block", filter=f"(*.{extension})"
         )[0]
@@ -160,17 +225,17 @@ class AssetBlockWidget(QWidget):
     def version_index_changed(self):
         path = self.get_selected_path()
 
-        # Update path output port value
         self.assetblock_node.path_port.value = path
         if not path:
+            self.assetblock_node.set_state(NodeState.UNSET)
             return
 
-        # Update metadata output port value
         metadata_path = get_metadata_path(path)
         if not metadata_path.exists():
             raise FileNotFoundError(f"Metadata file does not exist: {metadata_path}")
         data = json.loads(metadata_path.read_text())
         self.assetblock_node.metadata_port.value = data
+        self.assetblock_node.set_state(NodeState.EXECUTED)
 
 
 class AssetBlockWidgetWrapper(NodeBaseWidget):
@@ -197,25 +262,17 @@ class AssetBlockWidgetWrapper(NodeBaseWidget):
         self._widget.update_all_paths(Path(value))
 
 
-class AssetBlockNode(BaseNode):
+class AssetBlockNode(MasalaNode):
     __identifier__ = "AssetBlock"
     NODE_NAME = "AssetBlockNode"
     ASSETBLOCK: AssetBlock | None = None
 
     def __init__(self) -> None:
         super().__init__()
-
         self._wrapper = AssetBlockWidgetWrapper(parent=self.view, assetblock_node=self)
         self._widget = self._wrapper._widget
         self.add_custom_widget(self._wrapper)
         self._widget.update_button.setVisible(False)
-        self.setup_ports()
-
-    def output(self, index) -> MasalaOutputPort:
-        return super().output(index)
-
-    def outputs(self) -> dict[str, MasalaOutputPort]:
-        return super().outputs()
 
     @property
     def path_port(self) -> MasalaOutputPort:
@@ -224,15 +281,6 @@ class AssetBlockNode(BaseNode):
     @property
     def metadata_port(self) -> MasalaOutputPort:
         return self.output(1)
-
-    def setup_ports(self):
-        self.add_input("Fields", color=type_to_color("dict"))
-        self.add_output("Path", color=type_to_color("Path"))
-        self.add_output("Metadata", color=type_to_color("dict"))
-        self.path_port.output_description = Output("Path", "Path")
-        self.path_port.value = NOT_SET
-        self.metadata_port.output_description = Output("Metadata", "dict")
-        self.metadata_port.value = NOT_SET
 
     def on_input_connected(self, in_port: MasalaInputPort, out_port: MasalaOutputPort):
         self._widget.browse_button.setHidden(True)
@@ -243,16 +291,14 @@ class AssetBlockNode(BaseNode):
         self._widget.update_button.setHidden(True)
 
 
-class FunctionNode(BaseNode):
-    __identifier__ = "Function"
-    NODE_NAME = "FunctionNode"
-    FUNCTION_DESCRIPTION: FunctionNodeDescription
+class OperatorNode(MasalaNode):
+    __identifier__ = "Operator"
+    NODE_NAME = "OperatorNode"
+    NODE_DESCRIPTION: Operator
 
     def __init__(self) -> None:
         super().__init__()
         self.add_execute_button()
-        self.add_input_ports()
-        self.add_output_ports()
 
     def add_execute_button(self):
         self.add_button("execute")
@@ -266,51 +312,42 @@ class FunctionNode(BaseNode):
         try:
             self.run_callback()
         except:
-            self.set_color(*hex_to_tuple("#310404"))
-            self.executed_port.value = False
+            self.set_state(NodeState.FAILED)
             raise
 
     def run_callback(self):
         kwargs = self.get_kwargs()
-        result = self.FUNCTION_DESCRIPTION.callback(**kwargs)
+        result = self.NODE_DESCRIPTION.callback(**kwargs)
         self.update_output_port_values(result)
-        self.set_color(*hex_to_tuple("#032C03"))
+        self.set_state(NodeState.EXECUTED)
 
-    def update_output_port_values(self, result: tuple | list):
-        self.executed_port.value = True
+    def update_output_port_values(self, result: tuple | list | None):
         num_ports = len(self.output_ports())
-        if num_ports == 1:
+        if num_ports == 0:
             return
 
-        if not (isinstance(result, list) or isinstance(result, tuple)):
+        if not isinstance(result, (list, tuple)):
             raise TypeError("Function should return a list or a tuple of objects")
-        if len(result) != num_ports - 1:
+        if len(result) != num_ports:
             raise IndexError("Mismatch between number of ports and number of returned objects")
-        for i, port in enumerate(self.output_ports()):
-            if i == 0:
-                continue
-            port.value = result[i - 1]
+        for port, value in zip(self.output_ports(), result):
+            port.value = value
 
     def get_kwargs(self) -> dict[str, Any]:
         kwargs = {}
         for port in self.input_ports():
             connected_ports: list[MasalaOutputPort] = port.connected_ports()
 
-            # Port is not connected
             if not connected_ports:
                 if port.input_description.mandatory:
                     raise RuntimeError(f"The port {port.input_description.label} must be connected")
                 continue
 
-            # Port is connected
             connected_port = connected_ports[0]
 
-            # Check port declared type
-            if port.input_description.typ.lower() != "any":
-                if connected_port.output_description.typ != port.input_description.typ:
-                    raise TypeError(f"Type mismatch between {port} and {connected_port}")
+            if not port.input_description.typ.matches(connected_port.output_description.typ):
+                raise TypeError(f"Type mismatch between {port} and {connected_port}")
 
-            # Check value
             if connected_port.value == NOT_SET:
                 raise RuntimeError(f"The connected port {connected_port.name()} has no value yet")
 
@@ -318,59 +355,15 @@ class FunctionNode(BaseNode):
 
         return kwargs
 
-    def add_input_ports(self):
-        for input in self.FUNCTION_DESCRIPTION.inputs:
-            self.add_input_port(input)
-
-    def add_input_port(self, input: Input):
-        port: MasalaInputPort = self.add_input(input.label, color=type_to_color(input.typ))  # type: ignore
-        port.input_description = input
-
-    def on_input_connected(self, in_port: MasalaInputPort, out_port: MasalaOutputPort):
-        input_type = in_port.input_description.typ
-        output_type = out_port.output_description.typ
-
-        if input_type.lower() != output_type.lower() and input_type.lower() != "any":
-            in_port.disconnect_from(out_port)
-
-    def add_output_ports(self):
-        outputs = self.FUNCTION_DESCRIPTION.outputs.copy()
-        outputs.insert(0, Output(label="Executed", typ="bool"))
-        for output in outputs:
-            self.add_output_port(output)
-
-    def add_output_port(self, output: Output):
-        port: MasalaOutputPort = self.add_output(name=output.label, color=type_to_color(output.typ))  # type: ignore
-        port.output_description = output
-        port.value = NOT_SET
-
-    def input(self, index) -> MasalaInputPort:
-        return super().input(index)
-
-    def input_ports(self) -> list[MasalaInputPort]:
-        return super().input_ports()
-
-    def output(self, index) -> MasalaOutputPort:
-        return super().output(index)
-
-    def output_ports(self) -> list[MasalaOutputPort]:
-        return super().output_ports()
-
-    @property
-    def executed_port(self) -> MasalaOutputPort:
-        return self.output(0)
-
 
 class AssemblerGraph(NodeGraph):
-    def __init__(
-        self, assetblock_registry: AssetBlockRegistry, function_node_descriptions: list[FunctionNodeDescription]
-    ) -> None:
+    def __init__(self, assetblock_registry: AssetBlockRegistry, operators: list[Operator]) -> None:
         super().__init__()
         self.assetblock_registry = assetblock_registry
-        self.function_node_descriptions = function_node_descriptions
+        self.operators = operators
         self.configure_hotkeys()
         self.register_assetbklock_nodes()
-        self.register_function_nodes()
+        self.register_operator_nodes()
         self.register_other_nodes()
 
     def configure_hotkeys(self):
@@ -383,6 +376,12 @@ class AssemblerGraph(NodeGraph):
 
     def register_assetbklock_nodes(self):
         for assetblock in self.assetblock_registry.assetblocks:
+            node_description = NodeDescription(
+                name=assetblock.name,
+                label=assetblock.label,
+                inputs=[Input(kwarg="fields", label="Fields", typ=dict)],
+                outputs=[Output(label="Path", typ=Path), Output(label="Metadata", typ=dict)],
+            )
             new_class = type(
                 assetblock.name,
                 (AssetBlockNode,),
@@ -390,19 +389,20 @@ class AssemblerGraph(NodeGraph):
                     "__identifier__": "AssetBlocks",
                     "NODE_NAME": assetblock.label,
                     "ASSETBLOCK": assetblock,
+                    "NODE_DESCRIPTION": node_description,
                 },
             )
             self.register_node(new_class)
 
-    def register_function_nodes(self):
-        for description in self.function_node_descriptions:
+    def register_operator_nodes(self):
+        for operator in self.operators:
             new_class = type(
-                description.name,
-                (FunctionNode,),
+                operator.name,
+                (OperatorNode,),
                 {
-                    "__identifier__": "Functions",
-                    "NODE_NAME": description.label,
-                    "FUNCTION_DESCRIPTION": description,
+                    "__identifier__": "Operators",
+                    "NODE_NAME": operator.label,
+                    "NODE_DESCRIPTION": operator,
                 },
             )
             self.register_node(new_class)
@@ -419,9 +419,9 @@ class AssemblerGraph(NodeGraph):
         self.register_node(new_class)
 
 
-def show_dialog(assetblock_registry: AssetBlockRegistry, function_node_descriptions: list[FunctionNodeDescription]):
+def show_dialog(assetblock_registry: AssetBlockRegistry, operators: list[Operator]):
     app = get_qt_app()
-    graph_widget = AssemblerGraph(assetblock_registry, function_node_descriptions)
+    graph_widget = AssemblerGraph(assetblock_registry, operators)
     container = ContainerWidget(widget=graph_widget.widget, title="Masala Assembler", icon=get_masala_assembler_icon())
     dialog = ContainerDialog(container=container)
     dialog.show()

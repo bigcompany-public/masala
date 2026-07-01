@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from masala.api import FunctionNodeDescription, Input, Output
+from masala.api import Input, Operator, Output
 from masala.example.codex import codex
 
 
@@ -14,12 +14,12 @@ def callback(path: Path, metadata: dict | None = None, other: bool = True):
     return [group, geometries]
 
 
-import_static_mesh = FunctionNodeDescription(
+import_static_mesh = Operator(
     name="StaticMeshImport",
     label="Import Static Mesh",
     callback=callback,
     inputs=[
-        Input(kwarg="path", label="Path", typ="Path", mandatory=False),
+        Input(kwarg="path", label="Path", typ=Path, mandatory=False),
     ],
-    outputs=[Output(label="Main Group", typ="str"), Output(label="Geometries", typ="list")],
+    outputs=[Output(label="Main Group", typ=str), Output(label="Geometries", typ=list)],
 )

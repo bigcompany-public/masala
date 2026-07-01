@@ -1,4 +1,4 @@
-from masala.api import FunctionNodeDescription, Input
+from masala.api import Input, Operator
 
 
 def callback(controllers: list, geometries: list, assignment_metadata: dict):
@@ -6,13 +6,13 @@ def callback(controllers: list, geometries: list, assignment_metadata: dict):
     return
 
 
-apply_rig = FunctionNodeDescription(
+apply_rig = Operator(
     name="ApplyRig",
     label="Apply Rig",
     callback=callback,
     inputs=[
-        Input(kwarg="geometries", label="Geometries", typ="list", mandatory=True),
-        Input(kwarg="controllers", label="Controllers", typ="list", mandatory=True),
-        Input(kwarg="assignment_metadata", label="Metadata", typ="dict", mandatory=True),
+        Input(kwarg="geometries", label="Geometries", typ=list, mandatory=True),
+        Input(kwarg="controllers", label="Controllers", typ=list, mandatory=True),
+        Input(kwarg="assignment_metadata", label="Metadata", typ=dict, mandatory=True),
     ],
 )

@@ -1,4 +1,4 @@
-from masala.api import FunctionNodeDescription, Input
+from masala.api import Input, Operator
 
 
 def callback(materials: list, geometries: list, assignment_metadata: dict):
@@ -6,13 +6,13 @@ def callback(materials: list, geometries: list, assignment_metadata: dict):
     return
 
 
-assign_materials = FunctionNodeDescription(
+assign_materials = Operator(
     name="AssignMaterials",
     label="Assign Materials",
     callback=callback,
     inputs=[
-        Input(kwarg="geometries", label="Geometries", typ="list", mandatory=True),
-        Input(kwarg="materials", label="Materials", typ="list", mandatory=True),
-        Input(kwarg="assignment_metadata", label="Metadata", typ="dict", mandatory=True),
+        Input(kwarg="geometries", label="Geometries", typ=list, mandatory=True),
+        Input(kwarg="materials", label="Materials", typ=list, mandatory=True),
+        Input(kwarg="assignment_metadata", label="Metadata", typ=dict, mandatory=True),
     ],
 )

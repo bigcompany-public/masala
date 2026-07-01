@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import enum
 import json
 import logging
 import os
@@ -7,7 +8,7 @@ import time
 import traceback
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable, get_args, get_origin
 
 from lucent import Codex, Convention
 
@@ -36,6 +37,55 @@ def default_destination_path_callback(exporter: Exporter) -> Path:
 
 def get_metadata_path(path: Path) -> Path:
     return path.with_suffix(".abmd")
+
+
+class NodeState(enum.Enum):
+    UNSET = "unset"
+    EXECUTED = "executed"
+    FAILED = "failed"
+
+
+class PortType:
+    def __init__(self, typ: type | Any) -> None:
+        if isinstance(typ, str):
+            raise TypeError(
+                f"PortType no longer accepts string type names (got {typ!r}); "
+                "pass a real type instead, e.g. typ=str, typ=list[int], typ=Path"
+            )
+        if typ is None:
+            typ = type(None)
+        self.typ = typ
+        self.origin = get_origin(typ)
+        self.args = get_args(typ)
+
+    @property
+    def is_any(self) -> bool:
+        return self.typ is Any
+
+    def matches(self, other: PortType) -> bool:
+        if self.is_any or other.is_any:
+            return True
+        return self.typ == other.typ
+
+    @property
+    def key(self) -> str:
+        if self.is_any:
+            return "Any"
+        base = self.origin or self.typ
+        base_name = getattr(base, "__name__", str(base))
+        if not self.args:
+            return base_name
+        args_key = ", ".join(getattr(arg, "__name__", str(arg)) for arg in self.args)
+        return f"{base_name}[{args_key}]"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, PortType) and self.typ == other.typ
+
+    def __hash__(self) -> int:
+        return hash(self.typ)
+
+    def __repr__(self) -> str:
+        return f"PortType({self.key})"
 
 
 class AssetBlock:
@@ -70,16 +120,10 @@ class Exporter:
         self.convention = self.assetblock.convention
         self.codex = self.assetblock.codex
         self.current_path_callback = current_path_callback
-        self.destination_path_callback = (
-            destination_path_callback or default_destination_path_callback
-        )
+        self.destination_path_callback = destination_path_callback or default_destination_path_callback
         self.export_callback = export_callback
         self.metadata_callback = metadata_callback
-        self.variable_fields = (
-            variable_fields
-            if variable_fields is not None
-            else ["version", "description"]
-        )
+        self.variable_fields = variable_fields if variable_fields is not None else ["version", "description"]
         self.logs: str = ""
         self.error: bool = False
         self.result: dict | None = None
@@ -89,9 +133,9 @@ class Exporter:
 
     def get_current_fields(self) -> dict[str, str]:
         fields = self.codex.get_fields(self.get_current_path())  # type: ignore
-        for field in self.variable_fields:
-            if fields.get(field):
-                fields.pop(field)
+        for field_name in self.variable_fields:
+            if fields.get(field_name):
+                fields.pop(field_name)
         return fields
 
     def get_destination_path(self) -> Path:
@@ -131,9 +175,7 @@ class Exporter:
         metadata = {
             "user": os.environ["USERNAME"],
             "computer": os.environ["COMPUTERNAME"],
-            "date": "{year}_{month}_{day}_{hour}_{min}_{sec}".format(
-                **self.codex.get_datetime_fields()
-            ),
+            "date": "{year}_{month}_{day}_{hour}_{min}_{sec}".format(**self.codex.get_datetime_fields()),
         }
         return metadata
 
@@ -167,20 +209,14 @@ class AssetBlockRegistry:
 
     def register_assetblock(self, assetblock: AssetBlock):
         if assetblock.name in self.get_assetblock_names():
-            raise DuplicateAssetBlockError(
-                f'Multiple AssetBlocks with name "{assetblock.name}" cannot be registered'
-            )
+            raise DuplicateAssetBlockError(f'Multiple AssetBlocks with name "{assetblock.name}" cannot be registered')
         if assetblock.label in self.get_assetblock_labels():
-            raise DuplicateAssetBlockError(
-                f'Multiple AssetBlocks with label "{assetblock.label}" cannot be registered'
-            )
+            raise DuplicateAssetBlockError(f'Multiple AssetBlocks with label "{assetblock.label}" cannot be registered')
         self.assetblocks.append(assetblock)
 
     def __repr__(self) -> str:
         count = len(self.assetblocks)
-        return (
-            f"{self.__class__.__name__}({count} AssetBlock{'s' if count > 1 else ''})"
-        )
+        return f"{self.__class__.__name__}({count} AssetBlock{'s' if count > 1 else ''})"
 
     def __iter__(self):
         return iter(self.assetblocks)
@@ -192,17 +228,13 @@ class AssetBlockRegistry:
         return [assetblock.label for assetblock in self.assetblocks]
 
     def get_assetblock_by_name(self, name: str) -> AssetBlock:
-        assetblocks = [
-            assetblock for assetblock in self.assetblocks if assetblock.name == name
-        ]
+        assetblocks = [assetblock for assetblock in self.assetblocks if assetblock.name == name]
         if not assetblocks:
             raise AssetBlockNotFoundError(f'AssetBlock name not found : "{name}"')
         return assetblocks[0]
 
     def get_assetblock_by_label(self, label: str) -> AssetBlock:
-        assetblocks = [
-            assetblock for assetblock in self.assetblocks if assetblock.label == label
-        ]
+        assetblocks = [assetblock for assetblock in self.assetblocks if assetblock.label == label]
         if not assetblocks:
             raise AssetBlockNotFoundError(f'AssetBlock label not found : "{label}"')
         return assetblocks[0]
@@ -218,20 +250,30 @@ class AssetBlockRegistry:
 class Input:
     kwarg: str
     label: str
-    typ: str
+    typ: type | Any
     mandatory: bool = False
+
+    def __post_init__(self) -> None:
+        self.typ = PortType(self.typ)
 
 
 @dataclass
 class Output:
     label: str
-    typ: str
+    typ: type | Any
+
+    def __post_init__(self) -> None:
+        self.typ = PortType(self.typ)
 
 
 @dataclass
-class FunctionNodeDescription:
+class NodeDescription:
     name: str
     label: str
-    callback: Callable
-    inputs: list[Input] = field(default_factory=list[Input])
-    outputs: list[Output] = field(default_factory=list[Output])
+    inputs: list[Input] = field(default_factory=list)
+    outputs: list[Output] = field(default_factory=list)
+
+
+@dataclass
+class Operator(NodeDescription):
+    callback: Callable = field(kw_only=True)
