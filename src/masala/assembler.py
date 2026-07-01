@@ -1,6 +1,6 @@
 from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
-from masala.api import AssetBlockRegistry, Operator
+from masala.api import AssetBlock, Operator
 from masala.gui.container import ContainerDialog, ContainerWidget
 from masala.gui.utils import get_masala_assembler_icon, get_qt_app
 from masala.nodegraph import AssemblerGraph
@@ -9,12 +9,12 @@ from masala.nodegraph import AssemblerGraph
 class MasalaAssemblerWidget(QWidget):
     def __init__(
         self,
-        assetblock_registry: AssetBlockRegistry,
+        assetblocks: list[AssetBlock],
         operators: list[Operator],
         parent: QWidget | None = None,
     ):
         super().__init__(parent)
-        self.assetblock_registry = assetblock_registry
+        self.assetblocks = assetblocks
         self.operators = operators
         self.setup_ui()
 
@@ -32,7 +32,7 @@ class MasalaAssemblerWidget(QWidget):
         frame_layout = QVBoxLayout(frame)
         frame_layout.setContentsMargins(1, 1, 1, 1)
         frame.setProperty("depth", "3")
-        graph_widget = AssemblerGraph(self.assetblock_registry, self.operators)
+        graph_widget = AssemblerGraph(self.assetblocks, self.operators)
         frame_layout.addWidget(graph_widget.widget)
 
         # Bottom buttons
@@ -46,9 +46,9 @@ class MasalaAssemblerWidget(QWidget):
         frame_layout.addWidget(self.execute_graph_button)
 
 
-def show_dialog(assetblock_registry: AssetBlockRegistry, operators: list[Operator]):
+def show_dialog(assetblocks: list[AssetBlock], operators: list[Operator]):
     app = get_qt_app()
-    widget = MasalaAssemblerWidget(assetblock_registry=assetblock_registry, operators=operators)
+    widget = MasalaAssemblerWidget(assetblocks=assetblocks, operators=operators)
     container = ContainerWidget(widget=widget, title="Masala Assembler", icon=get_masala_assembler_icon())
     dialog = ContainerDialog(container=container)
     dialog.show()

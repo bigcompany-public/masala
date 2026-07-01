@@ -10,17 +10,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, get_args, get_origin
 
-from lucent import Codex, Convention
+from lucent import Convention
 
 from masala.stdout import CaptureStdout
 
 logger = logging.getLogger(__name__)
-
-
-class DuplicateAssetBlockError(Exception): ...
-
-
-class AssetBlockNotFoundError(Exception): ...
 
 
 class ExportFailed(Exception): ...
@@ -198,52 +192,6 @@ class Exporter:
     def write_metadata(self, path: Path):
         logger.info(f"Writing metadata to {path}")
         path.write_text(json.dumps(self.get_metadata(), indent=4))
-
-
-class AssetBlockRegistry:
-    def __init__(self, assetblocks: list[AssetBlock], codex: Codex) -> None:
-        self.assetblocks: list[AssetBlock] = []
-        self._codex = codex
-        for assetblock in sorted(assetblocks, key=lambda x: x.name):
-            self.register_assetblock(assetblock)
-
-    def register_assetblock(self, assetblock: AssetBlock):
-        if assetblock.name in self.get_assetblock_names():
-            raise DuplicateAssetBlockError(f'Multiple AssetBlocks with name "{assetblock.name}" cannot be registered')
-        if assetblock.label in self.get_assetblock_labels():
-            raise DuplicateAssetBlockError(f'Multiple AssetBlocks with label "{assetblock.label}" cannot be registered')
-        self.assetblocks.append(assetblock)
-
-    def __repr__(self) -> str:
-        count = len(self.assetblocks)
-        return f"{self.__class__.__name__}({count} AssetBlock{'s' if count > 1 else ''})"
-
-    def __iter__(self):
-        return iter(self.assetblocks)
-
-    def get_assetblock_names(self) -> list[str]:
-        return [assetblock.name for assetblock in self.assetblocks]
-
-    def get_assetblock_labels(self) -> list[str]:
-        return [assetblock.label for assetblock in self.assetblocks]
-
-    def get_assetblock_by_name(self, name: str) -> AssetBlock:
-        assetblocks = [assetblock for assetblock in self.assetblocks if assetblock.name == name]
-        if not assetblocks:
-            raise AssetBlockNotFoundError(f'AssetBlock name not found : "{name}"')
-        return assetblocks[0]
-
-    def get_assetblock_by_label(self, label: str) -> AssetBlock:
-        assetblocks = [assetblock for assetblock in self.assetblocks if assetblock.label == label]
-        if not assetblocks:
-            raise AssetBlockNotFoundError(f'AssetBlock label not found : "{label}"')
-        return assetblocks[0]
-
-    def __getitem__(self, key: str | int):
-        if isinstance(key, str):
-            return self.get_assetblock_by_name(key)
-        elif isinstance(key, int):
-            return self.assetblocks[key]
 
 
 @dataclass

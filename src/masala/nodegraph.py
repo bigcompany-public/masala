@@ -11,7 +11,6 @@ from qtpy.QtWidgets import QComboBox, QFileDialog, QPushButton, QVBoxLayout, QWi
 
 from masala.api import (
     AssetBlock,
-    AssetBlockRegistry,
     Input,
     NodeDescription,
     NodeState,
@@ -357,9 +356,9 @@ class OperatorNode(MasalaNode):
 
 
 class AssemblerGraph(NodeGraph):
-    def __init__(self, assetblock_registry: AssetBlockRegistry, operators: list[Operator]) -> None:
+    def __init__(self, assetblocks: list[AssetBlock], operators: list[Operator]) -> None:
         super().__init__()
-        self.assetblock_registry = assetblock_registry
+        self.assetblocks = assetblocks
         self.operators = operators
         self.configure_hotkeys()
         self.register_assetbklock_nodes()
@@ -375,7 +374,7 @@ class AssemblerGraph(NodeGraph):
         return
 
     def register_assetbklock_nodes(self):
-        for assetblock in self.assetblock_registry.assetblocks:
+        for assetblock in self.assetblocks:
             node_description = NodeDescription(
                 name=assetblock.name,
                 label=assetblock.label,
@@ -419,9 +418,9 @@ class AssemblerGraph(NodeGraph):
         self.register_node(new_class)
 
 
-def show_dialog(assetblock_registry: AssetBlockRegistry, operators: list[Operator]):
+def show_dialog(assetblocks: list[AssetBlock], operators: list[Operator]):
     app = get_qt_app()
-    graph_widget = AssemblerGraph(assetblock_registry, operators)
+    graph_widget = AssemblerGraph(assetblocks, operators)
     container = ContainerWidget(widget=graph_widget.widget, title="Masala Assembler", icon=get_masala_assembler_icon())
     dialog = ContainerDialog(container=container)
     dialog.show()
