@@ -17,6 +17,7 @@ class MasalaAssemblerWidget(QWidget):
         self.assetblocks = assetblocks
         self.operators = operators
         self.setup_ui()
+        self.setup_signals()
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
@@ -32,8 +33,8 @@ class MasalaAssemblerWidget(QWidget):
         frame_layout = QVBoxLayout(frame)
         frame_layout.setContentsMargins(1, 1, 1, 1)
         frame.setProperty("depth", "3")
-        graph_widget = AssemblerGraph(self.assetblocks, self.operators)
-        frame_layout.addWidget(graph_widget.widget)
+        self.graph_widget = AssemblerGraph(self.assetblocks, self.operators)
+        frame_layout.addWidget(self.graph_widget.widget)
 
         # Bottom buttons
         frame = QFrame()
@@ -44,6 +45,12 @@ class MasalaAssemblerWidget(QWidget):
         self.execute_graph_button = QPushButton("Execute Graph")
         self.execute_graph_button.setProperty("status", "important")
         frame_layout.addWidget(self.execute_graph_button)
+
+    def setup_signals(self):
+        self.execute_graph_button.clicked.connect(self.execute_graph_button_clicked)
+
+    def execute_graph_button_clicked(self):
+        self.graph_widget.evaluate()
 
 
 def show_dialog(assetblocks: list[AssetBlock], operators: list[Operator]):

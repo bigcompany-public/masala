@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import graphlib
 import json
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,10 @@ from masala.gui.container import ContainerDialog, ContainerWidget
 from masala.gui.utils import get_masala_assembler_icon, get_qt_app
 
 NOT_SET = "NOT SET"
+
+
+class EvaluationError(Exception): ...
+
 
 STATE_COLORS = {
     NodeState.EXECUTED: "#032C03",
@@ -57,13 +62,50 @@ class MasalaOutputPort(Port):
     def __init__(self, node, port):
         super().__init__(node, port)
         self.output_description: Output
-        self.value: Any = NOT_SET
+        self._value: Any = NOT_SET
+
+    @property
+    def value(self) -> Any:
+        return self._value
+
+    @value.setter
+    def value(self, value: Any) -> None:
+        self._value = value
+        self.update_tooltip()
+
+    def update_tooltip(self):
+        if self.value == NOT_SET:
+            tooltip = "Not set yet"
+        else:
+            try:
+                tooltip = json.dumps(self.value, indent=4)
+            except Exception:
+                tooltip = str(self.value)
+        self._Port__view.setToolTip(tooltip)  # type: ignore
 
 
 class MasalaInputPort(Port):
+    _last_valid_output_port: MasalaOutputPort | None = None
+
     def __init__(self, node, port):
         super().__init__(node, port)
         self.input_description: Input
+
+    def validate_connection(self, out_port: MasalaOutputPort) -> None:
+        if self.input_description.typ.matches(out_port.output_description.typ):
+            self._last_valid_output_port = out_port
+            return
+        self.disconnect_from(out_port)
+        self.restore_last_valid_connection()
+
+    def restore_last_valid_connection(self) -> None:
+        out_port = self._last_valid_output_port
+        if out_port is None:
+            return
+        try:
+            self.connect_to(out_port)
+        except Exception:
+            self._last_valid_output_port = None
 
 
 class MasalaNode(BaseNode):
@@ -72,8 +114,26 @@ class MasalaNode(BaseNode):
     def __init__(self) -> None:
         super().__init__()
         self._state = NodeState.UNSET
-        self.add_input_ports()
-        self.add_output_ports()
+        self._dependencies_port = self.add_dependency_port()
+        self._described_input_ports = self.add_input_ports()
+        self._executed_port = self.add_executed_port()
+        self._described_output_ports = self.add_output_ports()
+
+    @property
+    def described_input_ports(self) -> list[MasalaInputPort]:
+        return self._described_input_ports
+
+    @property
+    def described_output_ports(self) -> list[MasalaOutputPort]:
+        return self._described_output_ports
+
+    @property
+    def dependencies_port(self) -> MasalaInputPort:
+        return self._dependencies_port
+
+    @property
+    def executed_port(self) -> MasalaOutputPort:
+        return self._executed_port
 
     @property
     def state(self) -> NodeState:
@@ -88,14 +148,25 @@ class MasalaNode(BaseNode):
         color = STATE_COLORS.get(state)
         if color:
             self.set_color(*hex_to_tuple(color))
+        self.executed_port.value = self.is_executed
 
-    def add_input_ports(self) -> None:
-        for input_description in self.NODE_DESCRIPTION.inputs:
-            self.add_typed_input(input_description)
+    def execute(self) -> None:
+        raise NotImplementedError
 
-    def add_output_ports(self) -> None:
-        for output_description in self.NODE_DESCRIPTION.outputs:
-            self.add_typed_output(output_description)
+    def get_dependency_nodes(self) -> set[MasalaNode]:
+        dependencies = set()
+        for port in self.input_ports():
+            for connected_port in port.connected_ports():
+                connected_node = connected_port.node()
+                if isinstance(connected_node, MasalaNode):
+                    dependencies.add(connected_node)
+        return dependencies
+
+    def add_input_ports(self) -> list[MasalaInputPort]:
+        return [self.add_typed_input(input_description) for input_description in self.NODE_DESCRIPTION.inputs]
+
+    def add_output_ports(self) -> list[MasalaOutputPort]:
+        return [self.add_typed_output(output_description) for output_description in self.NODE_DESCRIPTION.outputs]
 
     def add_typed_input(self, input_description: Input) -> MasalaInputPort:
         port = self.add_input(input_description.label, color=type_to_color(input_description.typ))
@@ -106,6 +177,19 @@ class MasalaNode(BaseNode):
         port = self.add_output(output_description.label, color=type_to_color(output_description.typ))
         port.output_description = output_description
         port.value = NOT_SET
+        return port
+
+    def add_dependency_port(self) -> MasalaInputPort:
+        description = Input(kwarg="dependencies", label="Dependencies", typ=Any)
+        port = self.add_input(description.label, multi_input=True, color=type_to_color(description.typ))
+        port.input_description = description
+        return port
+
+    def add_executed_port(self) -> MasalaOutputPort:
+        description = Output(label="Executed", typ=bool)
+        port = self.add_output(description.label, color=type_to_color(description.typ))
+        port.output_description = description
+        port.value = False
         return port
 
     # NodeGraphQt.Port objects are plain Port instances at runtime; swapping
@@ -138,6 +222,9 @@ class MasalaNode(BaseNode):
 
     def output_ports(self) -> list[MasalaOutputPort]:
         return super().output_ports()
+
+    def on_input_connected(self, in_port: MasalaInputPort, out_port: MasalaOutputPort):
+        in_port.validate_connection(out_port)
 
 
 class AssetBlockWidget(QWidget):
@@ -275,15 +362,24 @@ class AssetBlockNode(MasalaNode):
 
     @property
     def path_port(self) -> MasalaOutputPort:
-        return self.output(0)
+        return self.described_output_ports[0]
 
     @property
     def metadata_port(self) -> MasalaOutputPort:
-        return self.output(1)
+        return self.described_output_ports[1]
+
+    def execute(self) -> None:
+        # AssetBlockNode has no callback to run: its value is set by a human
+        # picking a path in the widget. If that hasn't happened yet, there's
+        # nothing an automatic evaluation pass can do about it.
+        if self.state is not NodeState.EXECUTED:
+            self.set_state(NodeState.FAILED)
 
     def on_input_connected(self, in_port: MasalaInputPort, out_port: MasalaOutputPort):
-        self._widget.browse_button.setHidden(True)
-        self._widget.update_button.setHidden(False)
+        super().on_input_connected(in_port, out_port)
+        is_connected = bool(in_port.connected_ports())
+        self._widget.browse_button.setHidden(is_connected)
+        self._widget.update_button.setHidden(not is_connected)
 
     def on_input_disconnected(self, in_port, out_port):
         self._widget.browse_button.setHidden(False)
@@ -308,9 +404,12 @@ class OperatorNode(MasalaNode):
         self.button.clicked.connect(self.button_clicked)
 
     def button_clicked(self):
+        self.execute()
+
+    def execute(self) -> None:
         try:
             self.run_callback()
-        except:
+        except Exception:
             self.set_state(NodeState.FAILED)
             raise
 
@@ -321,7 +420,8 @@ class OperatorNode(MasalaNode):
         self.set_state(NodeState.EXECUTED)
 
     def update_output_port_values(self, result: tuple | list | None):
-        num_ports = len(self.output_ports())
+        described_ports = self.described_output_ports
+        num_ports = len(described_ports)
         if num_ports == 0:
             return
 
@@ -329,12 +429,12 @@ class OperatorNode(MasalaNode):
             raise TypeError("Function should return a list or a tuple of objects")
         if len(result) != num_ports:
             raise IndexError("Mismatch between number of ports and number of returned objects")
-        for port, value in zip(self.output_ports(), result):
+        for port, value in zip(described_ports, result):
             port.value = value
 
     def get_kwargs(self) -> dict[str, Any]:
         kwargs = {}
-        for port in self.input_ports():
+        for port in self.described_input_ports:
             connected_ports: list[MasalaOutputPort] = port.connected_ports()
 
             if not connected_ports:
@@ -372,6 +472,29 @@ class AssemblerGraph(NodeGraph):
     def _register_builtin_nodes(self):
         """Prevents backdrop node from being automatically registered"""
         return
+
+    def get_evaluation_order(self) -> list[MasalaNode]:
+        nodes = [node for node in self.all_nodes() if isinstance(node, MasalaNode)]
+        dependency_graph = {node: node.get_dependency_nodes() for node in nodes}
+        try:
+            return list(graphlib.TopologicalSorter(dependency_graph).static_order())
+        except graphlib.CycleError as error:
+            raise EvaluationError("Cannot evaluate: the node graph contains a cycle") from error
+
+    def evaluate(self) -> None:
+        for node in self.get_evaluation_order():
+            if node.state is NodeState.UNSET:
+                try:
+                    node.execute()
+                except Exception as error:
+                    raise EvaluationError(
+                        f"Evaluation stopped: node '{node.name()}' failed during execution"
+                    ) from error
+            if node.state is NodeState.FAILED:
+                raise EvaluationError(
+                    f"Evaluation stopped: node '{node.name()}' is in a failed state. "
+                    "Fix it and re-run it manually before continuing."
+                )
 
     def register_assetbklock_nodes(self):
         for assetblock in self.assetblocks:
