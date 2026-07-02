@@ -233,12 +233,12 @@ class MasalaNode(BaseNode):
     def add_input(self, *args, **kwargs) -> MasalaInputPort:
         port = super().add_input(*args, **kwargs)
         port.__class__ = MasalaInputPort
-        return port
+        return port  # type: ignore
 
     def add_output(self, *args, **kwargs) -> MasalaOutputPort:
         port = super().add_output(*args, **kwargs)
         port.__class__ = MasalaOutputPort
-        return port
+        return port  # type: ignore
 
     def input(self, index) -> MasalaInputPort:
         return super().input(index)
@@ -377,7 +377,7 @@ class AssetBlockWidgetWrapper(NodeBaseWidget):
 class AssetBlockNode(MasalaNode):
     __identifier__ = "AssetBlock"
     NODE_NAME = "AssetBlockNode"
-    ASSETBLOCK: AssetBlock | None = None
+    ASSETBLOCK: AssetBlock
     EXECUTE_BUTTON_LABEL = "Update"
 
     def __init__(self) -> None:
@@ -411,10 +411,22 @@ class AssetBlockNode(MasalaNode):
 
     def execute(self) -> None:
         try:
-            fields = self.get_kwargs()["fields"]
+            # Get fields
+            if self.fields_port.connected_ports():
+                fields: dict = self.get_kwargs()["fields"]
+            else:
+                if self.path_port.value == NOT_SET:
+                    raise ValueError("Please browse for a file")
+                fields = self.ASSETBLOCK.convention.parse(self.path_port.value)
+            if fields.get("version"):
+                fields.pop("version")
+
+            # Get paths
             paths = self.ASSETBLOCK.convention.get_paths(fields)
             if not paths:
                 raise FileNotFoundError(f"No asset found on disk for fields: {fields}")
+
+            # Update paths
             self._widget.update_all_paths(paths[-1])
         except Exception:
             self.set_state(NodeState.FAILED)
@@ -539,7 +551,7 @@ class AssemblerGraph(NodeGraph):
             node_description = NodeDescription(
                 name=assetblock.name,
                 label=assetblock.label,
-                inputs=[Input(kwarg="fields", label="Fields", typ=dict, mandatory=True)],
+                inputs=[Input(kwarg="fields", label="Fields", typ=dict, mandatory=False)],
                 outputs=[Output(label="Path", typ=Path), Output(label="Metadata", typ=dict)],
             )
             new_class = type(
