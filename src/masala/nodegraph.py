@@ -110,6 +110,7 @@ class MasalaInputPort(Port):
 
 class MasalaNode(BaseNode):
     NODE_DESCRIPTION: NodeDescription
+    EXECUTE_BUTTON_LABEL = "Run"
 
     def __init__(self) -> None:
         super().__init__()
@@ -118,6 +119,7 @@ class MasalaNode(BaseNode):
         self._described_input_ports = self.add_input_ports()
         self._executed_port = self.add_executed_port()
         self._described_output_ports = self.add_output_ports()
+        self.add_execute_button()
 
     @property
     def described_input_ports(self) -> list[MasalaInputPort]:
@@ -152,6 +154,39 @@ class MasalaNode(BaseNode):
 
     def execute(self) -> None:
         raise NotImplementedError
+
+    def add_execute_button(self) -> None:
+        self.add_button("execute")
+        nodebutton: NodeButton = self.get_widget("execute")
+        self.model.__dict__["execute"] = "placeholder"  # The button needs a property so it can be saved & copy pasted
+        self.button = nodebutton._button
+        self.button.setText(self.EXECUTE_BUTTON_LABEL)
+        self.button.clicked.connect(self.button_clicked)
+
+    def button_clicked(self) -> None:
+        self.execute()
+
+    def get_kwargs(self) -> dict[str, Any]:
+        kwargs = {}
+        for port in self.described_input_ports:
+            connected_ports: list[MasalaOutputPort] = port.connected_ports()
+
+            if not connected_ports:
+                if port.input_description.mandatory:
+                    raise RuntimeError(f"The port {port.input_description.label} must be connected")
+                continue
+
+            connected_port = connected_ports[0]
+
+            if not port.input_description.typ.matches(connected_port.output_description.typ):
+                raise TypeError(f"Type mismatch between {port} and {connected_port}")
+
+            if connected_port.value == NOT_SET:
+                raise RuntimeError(f"The connected port {connected_port.name()} has no value yet")
+
+            kwargs[port.input_description.kwarg] = connected_port.value
+
+        return kwargs
 
     def get_dependency_nodes(self) -> set[MasalaNode]:
         dependencies = set()
@@ -239,15 +274,12 @@ class AssetBlockWidget(QWidget):
 
     def setup_signals(self):
         self.browse_button.clicked.connect(self.browse_button_clicked)
-        self.update_button.clicked.connect(self.update_button_clicked)
         self.version_combobox.currentIndexChanged.connect(self.version_index_changed)
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
         self.browse_button = QPushButton("Browse")
         layout.addWidget(self.browse_button)
-        self.update_button = QPushButton("Update")
-        layout.addWidget(self.update_button)
         self.version_combobox = QComboBox()
         layout.addWidget(self.version_combobox)
 
@@ -263,12 +295,6 @@ class AssetBlockWidget(QWidget):
 
     def browse_button_clicked(self):
         path = self.show_file_dialog()
-        if not path:
-            return
-        self.update_all_paths(path)
-
-    def update_button_clicked(self):
-        path = self.get_selected_path()
         if not path:
             return
         self.update_all_paths(path)
@@ -352,13 +378,17 @@ class AssetBlockNode(MasalaNode):
     __identifier__ = "AssetBlock"
     NODE_NAME = "AssetBlockNode"
     ASSETBLOCK: AssetBlock | None = None
+    EXECUTE_BUTTON_LABEL = "Update"
 
     def __init__(self) -> None:
         super().__init__()
         self._wrapper = AssetBlockWidgetWrapper(parent=self.view, assetblock_node=self)
         self._widget = self._wrapper._widget
         self.add_custom_widget(self._wrapper)
-        self._widget.update_button.setVisible(False)
+
+    @property
+    def fields_port(self) -> MasalaInputPort:
+        return self.described_input_ports[0]
 
     @property
     def path_port(self) -> MasalaOutputPort:
@@ -368,43 +398,34 @@ class AssetBlockNode(MasalaNode):
     def metadata_port(self) -> MasalaOutputPort:
         return self.described_output_ports[1]
 
-    def execute(self) -> None:
-        # AssetBlockNode has no callback to run: its value is set by a human
-        # picking a path in the widget. If that hasn't happened yet, there's
-        # nothing an automatic evaluation pass can do about it.
-        if self.state is not NodeState.EXECUTED:
-            self.set_state(NodeState.FAILED)
+    def update_browse_visibility(self) -> None:
+        is_connected = bool(self.fields_port.connected_ports())
+        self._widget.browse_button.setHidden(is_connected)
 
     def on_input_connected(self, in_port: MasalaInputPort, out_port: MasalaOutputPort):
         super().on_input_connected(in_port, out_port)
-        is_connected = bool(in_port.connected_ports())
-        self._widget.browse_button.setHidden(is_connected)
-        self._widget.update_button.setHidden(not is_connected)
+        self.update_browse_visibility()
 
     def on_input_disconnected(self, in_port, out_port):
-        self._widget.browse_button.setHidden(False)
-        self._widget.update_button.setHidden(True)
+        self.update_browse_visibility()
+
+    def execute(self) -> None:
+        try:
+            fields = self.get_kwargs()["fields"]
+            paths = self.ASSETBLOCK.convention.get_paths(fields)
+            if not paths:
+                raise FileNotFoundError(f"No asset found on disk for fields: {fields}")
+            self._widget.update_all_paths(paths[-1])
+        except Exception:
+            self.set_state(NodeState.FAILED)
+            raise
 
 
 class OperatorNode(MasalaNode):
     __identifier__ = "Operator"
     NODE_NAME = "OperatorNode"
     NODE_DESCRIPTION: Operator
-
-    def __init__(self) -> None:
-        super().__init__()
-        self.add_execute_button()
-
-    def add_execute_button(self):
-        self.add_button("execute")
-        nodebutton: NodeButton = self.get_widget("execute")
-        self.model.__dict__["execute"] = "placeholder"  # The button needs a property so it can be saved & copy pasted
-        self.button = nodebutton._button
-        self.button.setText("Run")
-        self.button.clicked.connect(self.button_clicked)
-
-    def button_clicked(self):
-        self.execute()
+    EXECUTE_BUTTON_LABEL = "Run"
 
     def execute(self) -> None:
         try:
@@ -432,28 +453,6 @@ class OperatorNode(MasalaNode):
         for port, value in zip(described_ports, result):
             port.value = value
 
-    def get_kwargs(self) -> dict[str, Any]:
-        kwargs = {}
-        for port in self.described_input_ports:
-            connected_ports: list[MasalaOutputPort] = port.connected_ports()
-
-            if not connected_ports:
-                if port.input_description.mandatory:
-                    raise RuntimeError(f"The port {port.input_description.label} must be connected")
-                continue
-
-            connected_port = connected_ports[0]
-
-            if not port.input_description.typ.matches(connected_port.output_description.typ):
-                raise TypeError(f"Type mismatch between {port} and {connected_port}")
-
-            if connected_port.value == NOT_SET:
-                raise RuntimeError(f"The connected port {connected_port.name()} has no value yet")
-
-            kwargs[port.input_description.kwarg] = connected_port.value
-
-        return kwargs
-
 
 class AssemblerGraph(NodeGraph):
     def __init__(self, assetblocks: list[AssetBlock], operators: list[Operator]) -> None:
@@ -473,16 +472,37 @@ class AssemblerGraph(NodeGraph):
         """Prevents backdrop node from being automatically registered"""
         return
 
-    def get_evaluation_order(self) -> list[MasalaNode]:
-        nodes = [node for node in self.all_nodes() if isinstance(node, MasalaNode)]
-        dependency_graph = {node: node.get_dependency_nodes() for node in nodes}
+    def get_masala_nodes(self) -> list[MasalaNode]:
+        return [node for node in self.all_nodes() if isinstance(node, MasalaNode)]
+
+    def get_selected_masala_nodes(self) -> list[MasalaNode]:
+        return [node for node in self.selected_nodes() if isinstance(node, MasalaNode)]
+
+    def get_all_dependencies(self, node: MasalaNode) -> set[MasalaNode]:
+        visited: set[MasalaNode] = set()
+        stack = list(node.get_dependency_nodes())
+        while stack:
+            current = stack.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+            stack.extend(current.get_dependency_nodes())
+        return visited
+
+    def get_evaluation_order(self, nodes: list[MasalaNode] | None = None) -> list[MasalaNode]:
+        all_nodes = self.get_masala_nodes()
+        dependency_graph = {node: node.get_dependency_nodes() for node in all_nodes}
         try:
-            return list(graphlib.TopologicalSorter(dependency_graph).static_order())
+            order = list(graphlib.TopologicalSorter(dependency_graph).static_order())
         except graphlib.CycleError as error:
             raise EvaluationError("Cannot evaluate: the node graph contains a cycle") from error
+        if nodes is None:
+            return order
+        subset = set(nodes)
+        return [node for node in order if node in subset]
 
-    def evaluate(self) -> None:
-        for node in self.get_evaluation_order():
+    def run_nodes(self, nodes: list[MasalaNode]) -> None:
+        for node in nodes:
             if node.state is NodeState.UNSET:
                 try:
                     node.execute()
@@ -496,12 +516,30 @@ class AssemblerGraph(NodeGraph):
                     "Fix it and re-run it manually before continuing."
                 )
 
+    def evaluate(self) -> None:
+        self.run_nodes(self.get_evaluation_order())
+
+    def execute_nodes(self, nodes: list[MasalaNode]) -> None:
+        self.run_nodes(self.get_evaluation_order(nodes))
+
+    def evaluate_nodes(self, nodes: list[MasalaNode]) -> None:
+        dependencies: set[MasalaNode] = set()
+        for node in nodes:
+            dependencies |= self.get_all_dependencies(node)
+        self.run_nodes(self.get_evaluation_order(list(dependencies | set(nodes))))
+
+    def execute_selected_nodes(self) -> None:
+        self.execute_nodes(self.get_selected_masala_nodes())
+
+    def evaluate_selected_nodes(self) -> None:
+        self.evaluate_nodes(self.get_selected_masala_nodes())
+
     def register_assetbklock_nodes(self):
         for assetblock in self.assetblocks:
             node_description = NodeDescription(
                 name=assetblock.name,
                 label=assetblock.label,
-                inputs=[Input(kwarg="fields", label="Fields", typ=dict)],
+                inputs=[Input(kwarg="fields", label="Fields", typ=dict, mandatory=True)],
                 outputs=[Output(label="Path", typ=Path), Output(label="Metadata", typ=dict)],
             )
             new_class = type(

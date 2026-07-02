@@ -141,6 +141,33 @@
   },
   {
     "type":"menu",
+    "label":"&Execution",
+    "items":[
+      {
+        "type":"command",
+        "label":"Run Selected Nodes",
+        "file":"./hotkey_functions.py",
+        "function_name":"run_selected_nodes",
+        "shortcut":"Ctrl+R"
+      },
+      {
+        "type":"command",
+        "label":"Evaluate Selected Nodes",
+        "file":"./hotkey_functions.py",
+        "function_name":"evaluate_selected_nodes",
+        "shortcut":"Ctrl+E"
+      },
+      {
+        "type":"command",
+        "label":"Evaluate Entire Graph",
+        "file":"./hotkey_functions.py",
+        "function_name":"evaluate_graph",
+        "shortcut":"Ctrl+Shift+E"
+      }
+    ]
+  },
+  {
+    "type":"menu",
     "label":"&Graph",
     "items":[
       {
