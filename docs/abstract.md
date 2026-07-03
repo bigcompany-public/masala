@@ -10,6 +10,8 @@ The lifecycle of an asset typically looks like this:
 - The file is exported as a starting point for the surfacing artist.
 - The process repeats across the following departments.
 
+![waterfall_pipeline](img/waterfall_pipeline.png)
+
 This pipeline has several shortcomings:
 
 1. Departments depend on one another. When the asset mesh is ready, many departments (such as surfacing, grooming, rigging, and cfx) **should** be able to begin work immediately, but they often cannot because they are waiting for another department to finish its part.
@@ -17,6 +19,9 @@ This pipeline has several shortcomings:
 3. Throughout the asset lifecycle, many derived representations are generated for purposes such as client review, variations, level of detail, quality checks, and testing. These often require reshaping the asset in different ways.
 4. Each department inherits the complexity introduced by previous ones, which can lead to bugs and files that become unnecessarily heavy.
 5. The person or department that ends up at the end of the assembly line often becomes responsible for exporting the final asset. This can turn them into a bottleneck, as they are then accountable for a wide range of issues and decisions.
+
+!!! warning "More often than not, the pipeline end up looking like this"
+    ![waterfall_pipeline_mess](img/waterfall_pipeline_mess.png)
 
 ## How Masala addresses it
 
@@ -31,9 +36,11 @@ The goal is now to combine the latest version of each part. This is where the `A
 
 The `Assembler` uses `Operators` to define how `AssetBlocks` should be imported, combined, and adjusted to produce the desired result.
 
-!!! success
+!!! success "Our Recommended pipeline"
     With this framework, the entire team can contribute to an asset independently of the department they work in.
     At any point in the asset creation process, any representation of the asset (such as a final asset, proxy, or variation) can be rebuilt from scratch in a matter of seconds.
+
+    ![masala_pipeline](img/masala_pipeline.png)
 
 ## Caveats
 
