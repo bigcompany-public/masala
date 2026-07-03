@@ -17,6 +17,12 @@ dependencies = [
     "pip>=26.0.1",
 ]
 
+[project.optional-dependencies]
+docs = [
+    "zensical",
+    "mkdocstrings-python"
+]
+
 [project.scripts]
 masala = "masala:main"
 

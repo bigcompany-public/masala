@@ -1,0 +1,44 @@
+# TUTORIAL
+# Edit this file then run this command in the root directory
+# zensical serve
+#
+# The documentation can be seen by going on chrome :
+# http://localhost:8000/
+
+# ressources :
+# https://gist.github.com/rxaviers/7360908
+
+[project]
+site_name = "Masala"
+site_description = 'Masala is a system for creating assets from modular building blocks ("AssetBlocks") that are exported independently and later recombined'
+site_url = "https://bigcompany-public.github.io/masala/"
+repo_url = "https://github.com/bigcompany-public/masala/"
+repo_name = "bigcompany-public/masala"
+edit_uri = "edit/main/docs/"
+extra_css = ["stylesheets/extra.css"]
+nav = [
+    { "Home" = "index.md" }
+]
+
+# Palette toggle for dark mode
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "blue"
+accent = "blue"
+toggle.icon = "lucide/moon-star"
+toggle.name = ""
+
+[project.theme]
+features = [
+    "navigation.sections",
+    "navigation.top",
+    "search.suggest",
+    "search.highlight",
+    "content.tabs.link",
+    "content.code.annotation",
+    "content.code.copy",
+]
+
+[project.theme.icon]
+repo = "fontawesome/brands/github"
