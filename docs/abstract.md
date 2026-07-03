@@ -1,39 +1,39 @@
 # Abstract
 
-Before diving in, let's explain the framework proposed by Masala.
+Before diving in, let us introduce the framework proposed by Masala.
 
-## The problem Masala tries to solve
+## The problem Masala aims to solve
 
-The lifespan of an asset typically looks like that:
+The lifecycle of an asset typically looks like this:
 
-- 3D Modeler creates an asset without materials.
-- A file is exported, and serves as a base for the surfacing artist.
-- rince and repeat for all the following departments.
+- A 3D modeler creates an asset without materials.
+- The file is exported as a starting point for the surfacing artist.
+- The process repeats across the following departments.
 
-This asset pipeline has multiple flaws: 
+This pipeline has several shortcomings:
 
-1. Departments are dependant on each others. When the asset's mesh is ready, a lot of departments *should* be able to work right away (surfacing, grooming, rigging, cfx...) but aren't able to do so because they are waiting another deparment to finish their job.
-2. Some changes may occur in the wrong department: textures may change because of the grooming artist, or adjustments to the mesh may be done to accomodate rigging, causing the pipeline to go all the way back, or involve cross-departments shenanigans.
-3. All across the lifespan of the asset, a lot of "derived" representations of the asset can be generated, for purposes like client validation, variations, level of detail, quality checks, tests... which can require to bend the assets in all sorts of ways.
-4. Each department carries the mess of previous departments, leading into all sorts of bugs and files that end up way heavier than they should.
+1. Departments depend on one another. When the asset mesh is ready, many departments (such as surfacing, grooming, rigging, and cfx) **should** be able to begin work immediately, but they often cannot because they are waiting for another department to finish its part.
+2. Changes may be introduced in the wrong department. For example, textures may be adjusted by the grooming artist, or the mesh may be modified to accommodate rigging, forcing the pipeline to move backward or requiring cross-department coordination.
+3. Throughout the asset lifecycle, many derived representations are generated for purposes such as client review, variations, level of detail, quality checks, and testing. These often require reshaping the asset in different ways.
+4. Each department inherits the complexity introduced by previous ones, which can lead to bugs and files that become unnecessarily heavy.
 
 ## How Masala addresses it
 
-Masala is build around the concept of `AssetBlocks`, which are small units of the asset that are versioned and stored in an `AssetBlockLibrary`. 
+Masala is built around the concept of `AssetBlocks`, which are small, versioned units of an asset stored in an `AssetBlockLibrary`.
 
-To generate these `AssetBlocks`, the user will use `Exporters` designed to export only the relevant data (for instance, the mesh stripped from its materials and constraints), and possibly metadatas to add extra details along the exported `AssetBlock`
+To create these `AssetBlocks`, users employ `Exporters` designed to export only the relevant data (for example, a mesh stripped of its materials and constraints) along with optional metadata that adds context to the exported `AssetBlock`.
 
 !!! note
-    An `AssetBlock` can have multiple `Exporters`. For instance, and `Exporter` for Blender, and one for Maya.
+    An `AssetBlock` can have multiple `Exporters`. For instance, one `Exporter` for Blender and another for Maya.
 
-Now, the goal is to combine the latest version of each of these parts: this is where the `Assembler` comes into play.
+The goal is now to combine the latest version of each part. This is where the `Assembler` comes into play.
 
-The `Assembler` uses `Operators` that indicate how `AssetBlocks` should be imported, combined, and tweaked to end up with the desired result.
+The `Assembler` uses `Operators` to define how `AssetBlocks` should be imported, combined, and adjusted to produce the desired result.
 
 !!! success
-    With this framework the entire team contributes to an asset, independently of the department they are working in.
-    At any point during the fabrication of an asset, any representation of the asset (finalized asset, proxy, variation...) can be rebuilt from scratch in a matter of seconds.
+    With this framework, the entire team can contribute to an asset independently of the department they work in.
+    At any point in the asset creation process, any representation of the asset (such as a final asset, proxy, or variation) can be rebuilt from scratch in a matter of seconds.
 
 ## Caveats
 
-Masala is centered around the idea of granularity, where each `AssetBlock` acts as a lean single-purpose component... But assets can be complex and intertwined, especially when one wants to get the most of a DCC's features. As a result, it is often wise to know where Masala's modular design should stop, and where a careful hand-crafted assembly should start.
+Masala is centered on the idea of granularity, where each `AssetBlock` acts as a lean, single-purpose component. However, assets can be complex and deeply interconnected, especially when one wants to take full advantage of a DCC's features. As a result, it is often important to know where Masala's modular design should stop and where a more carefully handcrafted assembly should begin.
