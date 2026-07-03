@@ -38,3 +38,5 @@ The `Assembler` uses `Operators` to define how `AssetBlocks` should be imported,
 ## Caveats
 
 Masala is centered on the idea of granularity, where each `AssetBlock` acts as a lean, single-purpose component. However, assets can be complex and deeply interconnected, especially when one wants to take full advantage of a DCC's features. As a result, it is often important to know where Masala's modular design should stop and where a more carefully handcrafted assembly should begin.
+
+In practice, assembling assets together can become a task in itself. As pipelines grow more complex, this responsibility is often better handled by a technical profile with the appropriate expertise rather than by a specialist from a single department.
