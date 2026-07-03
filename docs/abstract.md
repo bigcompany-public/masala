@@ -16,6 +16,7 @@ This pipeline has several shortcomings:
 2. Changes may be introduced in the wrong department. For example, textures may be adjusted by the grooming artist, or the mesh may be modified to accommodate rigging, forcing the pipeline to move backward or requiring cross-department coordination.
 3. Throughout the asset lifecycle, many derived representations are generated for purposes such as client review, variations, level of detail, quality checks, and testing. These often require reshaping the asset in different ways.
 4. Each department inherits the complexity introduced by previous ones, which can lead to bugs and files that become unnecessarily heavy.
+5. The person or department that ends up at the end of the assembly line often becomes responsible for exporting the final asset. This can turn them into a bottleneck, as they are then accountable for a wide range of issues and decisions.
 
 ## How Masala addresses it
 
