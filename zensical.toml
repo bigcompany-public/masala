@@ -17,7 +17,8 @@ repo_name = "bigcompany-public/masala"
 edit_uri = "edit/main/docs/"
 extra_css = ["stylesheets/extra.css"]
 nav = [
-    { "Home" = "index.md" }
+    { "Home" = "index.md" },
+    { "Abstract" = "abstract.md" },
 ]
 
 # Palette toggle for dark mode

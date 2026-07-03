@@ -28,4 +28,4 @@ Masala is only a framework, and does not provide a turnkey solution for engineer
 ---
 
 !!! info ""
-    <a href="Next Section"> <div style="text-align: right; font-weight: bold"> [Next Section : Quick Start](./quick_start.md) </div>
+    <a href="Next Section"> <div style="text-align: right; font-weight: bold"> [Next Section : Abstract](./abstract.md) </div>
