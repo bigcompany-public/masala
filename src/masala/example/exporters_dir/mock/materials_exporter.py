@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from masala.api import Exporter
-from masala.example.assetblocks_dir.staticmesh import static_mesh
+from masala.example.assetblocks_dir.materials import materials
 
 
 def get_path() -> Path:
@@ -12,13 +12,10 @@ def export(path: Path):
     print(f"Writing placeholder file to {path}")
     path.parent.mkdir(exist_ok=True, parents=True)
     path.write_text("placeholder")
-    return
 
 
 def meta() -> dict:
     return {"hello": "world"}
 
 
-static_mesh_exporter = Exporter(
-    static_mesh, current_path_callback=get_path, export_callback=export, metadata_callback=meta
-)
+materials_exporter = Exporter(materials, current_path_callback=get_path, export_callback=export, metadata_callback=meta)

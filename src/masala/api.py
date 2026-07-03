@@ -105,7 +105,7 @@ class Exporter:
         self,
         assetblock: AssetBlock,
         current_path_callback: Callable[..., Path],
-        export_callback: Callable[[Path], dict | None],
+        export_callback: Callable[[Path], dict | None] | None = None,
         destination_path_callback: Callable[[Exporter], Path] | None = None,
         metadata_callback: Callable[..., dict] | None = None,
         variable_fields: list[str] | None = None,
