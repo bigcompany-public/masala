@@ -9,7 +9,7 @@ from masala.example.operators_dir.import_static_mesh import import_static_mesh
 from masala.example.operators_dir.print_value import print_value
 from masala.example.operators_dir.solve_path import solve_path
 
-function_node_descriptions = [
+operators = [
     import_static_mesh,
     print_value,
     assign_materials,
