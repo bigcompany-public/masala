@@ -91,7 +91,7 @@ Evaluating the entire graph or a node selection automatically computes the order
 You can enforce evaluation order by using the `Dependencies` input plug of Operator nodes.
 
 !!! tip "In this example, Operator :three: needs both Operators :one: and :two: before it can be executed"
-    ![evaluation_order](img/evaluation_order.png)
+    ![evaluation_order](img/evaluation_order.png) 
 
 ---
 
