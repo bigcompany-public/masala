@@ -2,7 +2,7 @@
 
 ## What is Masala?
 
-A system for creating assets from modular building blocks (`AssetBlocks`) that are exported independently and recombined at will. This approach improves task parallelization and streamlines the creation of multiple variations of the same asset.
+Masala is a system for creating assets from modular building blocks (`AssetBlocks`) that are exported independently and recombined at will. This approach improves task parallelization and streamlines the creation of multiple variations of the same asset.
 
 ![masala_exporter](img/masala_exporter.png)
 

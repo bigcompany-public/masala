@@ -1,7 +1,5 @@
 # Tools
 
-!!! warning "While tools are available through the Masala API, they are designed to be implemented via DCC plugins/extensions"
-
 ## Masala Exporter
 
 ![masala_exporter](img/masala_exporter.png)
@@ -32,7 +30,7 @@ A few additional options can be accessed by right-clicking the Exporters Area.
 ## Masala Assembler
 
 Masala Assembler is a node graph that describes the steps that must be taken to obtain the desired result.
-Keep in mind the end result may not always be a finalized asset, as you can also use Recipes to create:
+Keep in mind the end result may not always be a finalized asset, as you can also write Recipes to create:
 
 - asset variations
 - levels of detail
@@ -55,7 +53,7 @@ You can access all available actions (and see their shortcut) by right-clicking 
 
 ![assembler_menu](img/assembler_menu.png)
 
-### AssetBlocks Nodes
+### AssetBlock Nodes
 
 Pressing `Tab` shows the Node Search. From there, you can access all AssetBlocks under the `AssetBlocks` submenu, or search them by name.
 
@@ -85,6 +83,16 @@ To execute the entire graph, you can press the `Execute Graph` button or press `
 If you need more fine tune control over what is executed, you can:
 
 - Evaluate Selected Nodes (meaning "execute selected nodes and their parents") by pressing `Ctrl + E`
-- Run Single Nodes by Clicking on the `Run Button` or by pressing `Ctrl + R`
+- Run Single Nodes by clicking on the `Run Button` or by pressing `Ctrl + R`
 
-### About Node Graph Order Evaluation
+#### About Node Graph Order Evaluation
+
+The order in which Operators are executed depends on their connections: if any of `Operator1` output plug is connected to any of `Operator2` input plug, then `Operator2` cannot run until `Operator1` has been executed.
+
+Evaluating the entire graph or a node selection automatically computes the order in which operators should run. 
+
+You can enforce evaluation order by using the `Dependencies` input plug of Operator nodes.
+
+!!! tip "In this example, Operator :three: needs both Operators :one: and :two: before being able to be executed"
+
+    ![evaluation_order](img/evaluation_order.png)

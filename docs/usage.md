@@ -5,8 +5,12 @@ Configuring Masala for your project implies the following steps.
 - Defining naming conventions for the AssetBlocks
 - Registering the AssetBlocks
 - Creating Exporter(s) for each AssetBlock
-- Creating Assembly Operators to indicate how AssetBlocks should be combined
-- Save node graphs, that act as recipes for your end products.
+- Creating Assembly Operators to indicate how AssetBlocks should be imported and combined
+- Save node graphs, that act as Recipes for your end products.
+
+Here is a representation of how each concept connects to each others.
+
+![data_chart](img/data_chart.png)
 
 !!! tip
     This documentation teaches you how to create AssetBlocks "in a vaccuum", but you will most likely have to perform this steps in the context of a specific DCC. Thus, keep in mind everything we do here has to be fed into the configuration of:
@@ -19,9 +23,9 @@ Configuring Masala for your project implies the following steps.
 Masala uses the python package [Lucent](https://pypi.org/project/lucent-codex/) to define where AssetBlocks should be stored.
 For more information, see [Lucent official documentation](https://tristanlanguebien.github.io/lucent/)
 
-In Lucent, naming conventions are registered in a `Codex` objects that contains `Rules` (regexes that the paths must respect) and `Conventions` (templates for paths).
+In Lucent, naming conventions are registered in a `Codex` objects that contains `Rules` (regexes that the fields must respect) and `Conventions` (templates for paths).
 
-Here is a minimal example to setup a few AssetBlocks.
+Here is a minimal example on how to setup a few AssetBlock naming conventions.
 
 === "masala_codex.py :memo:"
     ```python
@@ -81,7 +85,7 @@ Now that masala knows where to store the AssetBlocks, we can feed the Convention
 
 !!! success "This AssetBlock object will later be used to serve as a shared base for exporters and importers"
 
-# Creating an Exporter
+## Creating an Exporter
 
 Exporting an AssetBlock is made of 4 steps: 
 
@@ -134,13 +138,24 @@ These steps are encapsulated into an Exporter object.
 !!! tip
     As stated earlier in this documentation, an AssetBlock can have multiple exporters. For instance, your asset pipeline may authorize artists to generate a mesh from both maya and blender.
 
-## Creating Operators for Masala Assembler Tool
+### About Metadatas
+
+An exporter will always create a `.abmd` file with a few informations saved in json format (time of the export, author, computer name...). 
+
+On top of these generic data: 
+
+- the `export_callback` may return a `dict` with extra data collected during the export process.
+- an optional `metadata_callback` can be provided to the exporter.
+
+## Creating Operators
 
 When your AssetBlock is registered, it will appear in the available AssetBlocks of the Masala Assembler Tool.
 
 ![masala_mesh_assembler](img/masala_mesh_assembler.png)
 
-Thas is a good start, but we cannot really do anything with it at the moment. For that, we need to create `Operators`, which are nodes in which data such as the AssetBlock's path or the AssetBlock's metadata can be plugged.
+This is a good start, but we cannot really do anything with it at the moment, as the AssetBlock Operator is just here to detect the available versions. We now need to create `Operators`, which are nodes that execute a function and in which data such as the AssetBlock's path or the AssetBlock's metadata can be plugged.
+
+Let's see how to create an Operator that imports the selected version:
 
 === "operators.py :memo:"
     ```python
@@ -173,12 +188,23 @@ The newly created Operator shows up in the available Operators in the Masala Ass
 
 ![example_import_operator0](img/example_import_operator0.png)
 
-As you can see, the AssetBlock's path can be plugged into the Path input plug, and the proper value is returned in the Status output plug.
+As you can see, the AssetBlock's path can be plugged into the "Path" input plug, and the proper value is returned in the "Status" output plug.
 
 ![example_import_operator1](img/example_import_operator1.png)
 
+### About Inputs and Outputs
+
 !!! tip
     Inputs have type validation : in this case, you won't be able to plug an integer into the Path input. If you want to be more permissive (for instance, to allow for str and Path objects) you may set `typ` to `typing.Any`
+
+!!! tip
+    You may have noticed the import callback we wrote returned a list: each item of the list goes to each output port. It is expected that if you have 3 output ports, your function should return a list containing 3 objects
+
+!!! tip
+    By default, all Operators have a `Dependencies` input plug, used to indicate nodes that should be executed before the Operator runs. This plug does not pass any values around, it is just here to fine-tune evaluation order.
+
+!!! tip
+    By defaut, all Operators have a `Executed` output plug that returns either `True` or `False`.
 
 ## Sharing Assembler Recipes
 
