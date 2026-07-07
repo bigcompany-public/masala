@@ -51,4 +51,4 @@ In practice, assembling assets together can become a task in itself. As pipeline
 ---
 
 !!! info ""
-    <a href="Next Section"> <div style="text-align: right; font-weight: bold"> [Next Section : usage](./usage.md) </div>
+    <a href="Next Section"> <div style="text-align: right; font-weight: bold"> [Next Section : Usage](./usage.md) </div>

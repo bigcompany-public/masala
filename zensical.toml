@@ -20,6 +20,7 @@ nav = [
     { "Home" = "index.md" },
     { "Abstract" = "abstract.md" },
     { "Usage" = "usage.md" },
+    { "Tools" = "tools.md" },
 ]
 
 # Palette toggle for dark mode

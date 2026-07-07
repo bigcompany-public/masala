@@ -180,4 +180,15 @@ As you can see, the AssetBlock's path can be plugged into the Path input plug, a
 !!! tip
     Inputs have type validation : in this case, you won't be able to plug an integer into the Path input. If you want to be more permissive (for instance, to allow for str and Path objects) you may set `typ` to `typing.Any`
 
-:rocket: Congratulations, you now have all the keys to create as many AssetBlocks, Exporters and Operators as you like. With a little of creativity, you can use Masala to build the asset pipeline that fits your needs. 
+## Sharing Assembler Recipes
+
+Masala Assembler gives you the option to save your node graphs at the json format, so they can be loaded or imported. Within a Recipe Library, these files become your main way of sharing an asset pipeline across a team.
+
+![save_graph](img/save_graph.png)
+
+:rocket: Congratulations, you now have all the keys to create as many AssetBlocks, Exporters, Operators and Recipes as you like. With a little of creativity, you can use Masala to build the asset pipeline that fits your needs.
+
+---
+
+!!! info ""
+    <a href="Next Section"> <div style="text-align: right; font-weight: bold"> [Next Section : Tools](./tools.md) </div>
