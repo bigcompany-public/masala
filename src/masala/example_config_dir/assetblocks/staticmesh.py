@@ -1,5 +1,6 @@
-from masala.api import AssetBlock
-from masala.example.codex import codex
+from masala import AssetBlock
+
+from ..codex_config import codex
 
 static_mesh = AssetBlock(
     name="StaticMesh",

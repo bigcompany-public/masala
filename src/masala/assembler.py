@@ -1,3 +1,8 @@
+import importlib.util
+import sys
+from importlib.machinery import ModuleSpec
+from pathlib import Path
+
 from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from masala.api import AssetBlock, Operator
@@ -53,7 +58,52 @@ class MasalaAssemblerWidget(QWidget):
         self.graph_widget.evaluate()
 
 
-def show_dialog(assetblocks: list[AssetBlock], operators: list[Operator]):
+def get_assembler_config_from_path(
+    config_package_path: Path | str,
+    operators_submodule_name: str,
+) -> tuple[list[AssetBlock], list[Operator]]:
+    config_package_path = Path(config_package_path)
+    if operators_submodule_name.endswith(".py"):
+        operators_submodule_name = operators_submodule_name[:-3]
+
+    # Ensure package structure
+    required_paths = [
+        config_package_path,
+        config_package_path.joinpath("__init__.py"),
+        config_package_path.joinpath("assetblocks_config.py"),
+        config_package_path.joinpath("codex_config.py"),
+        config_package_path.joinpath(operators_submodule_name).with_suffix(".py"),
+    ]
+    for _path in required_paths:
+        if not _path.exists():
+            raise FileNotFoundError(f"Wrong config package structure. File is missing : {_path}")
+
+    # Import the package (__init__.py)
+    package_name = "masala_assembler_config"
+    spec = importlib.util.spec_from_file_location(
+        package_name,
+        config_package_path.joinpath("__init__.py"),
+        submodule_search_locations=[config_package_path.as_posix()],
+    )
+    assert isinstance(spec, ModuleSpec)
+    package_module = importlib.util.module_from_spec(spec)
+    sys.modules[package_name] = package_module
+    spec.loader.exec_module(package_module)  # type: ignore
+
+    # Load AssetBlocks from the submodule
+    full_submodule_name = f"{package_name}.assetblocks_config"
+    submodule = importlib.import_module(full_submodule_name)
+    assetblocks = getattr(submodule, "assetblocks")
+
+    # Load operators from the submodule
+    full_submodule_name = f"{package_name}.{operators_submodule_name}"
+    submodule = importlib.import_module(full_submodule_name)
+    operators = getattr(submodule, "operators")
+
+    return (assetblocks, operators)
+
+
+def show_assembler_dialog(assetblocks: list[AssetBlock], operators: list[Operator]):
     app = get_qt_app()
     widget = MasalaAssemblerWidget(assetblocks=assetblocks, operators=operators)
     container = ContainerWidget(widget=widget, title="Masala Assembler", icon=get_masala_assembler_icon())

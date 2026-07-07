@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import importlib.util
+import sys
 from enum import StrEnum, auto
+from importlib.machinery import ModuleSpec
+from pathlib import Path
 
 import qtawesome
 from qtpy.QtCore import QEvent, Qt
@@ -463,7 +467,48 @@ class MasalaExporterWidget(QWidget):
             exporter_widget.run()
 
 
-def show_dialog(exporters: list[Exporter]):
+def get_exporter_config_from_path(
+    config_package_path: Path | str,
+    exporter_submodule_name: str,
+) -> list[Exporter]:
+    config_package_path = Path(config_package_path)
+    if exporter_submodule_name.endswith(".py"):
+        exporter_submodule_name = exporter_submodule_name[:-3]
+
+    # Ensure package structure
+    required_paths = [
+        config_package_path,
+        config_package_path.joinpath("__init__.py"),
+        config_package_path.joinpath("assetblocks_config.py"),
+        config_package_path.joinpath("codex_config.py"),
+        config_package_path.joinpath(exporter_submodule_name).with_suffix(".py"),
+    ]
+    for _path in required_paths:
+        if not _path.exists():
+            raise FileNotFoundError(f"Wrong config package structure. File is missing : {_path}")
+
+    # Import the package (__init__.py)
+    package_name = "masala_exporter_config"
+    spec = importlib.util.spec_from_file_location(
+        package_name,
+        config_package_path.joinpath("__init__.py"),
+        submodule_search_locations=[config_package_path.as_posix()],
+    )
+    assert isinstance(spec, ModuleSpec)
+    package_module = importlib.util.module_from_spec(spec)
+    sys.modules[package_name] = package_module
+    spec.loader.exec_module(package_module)  # type: ignore
+
+    # Import the specific submodule dynamically
+    full_submodule_name = f"{package_name}.{exporter_submodule_name}"
+    submodule = importlib.import_module(full_submodule_name)
+
+    # Load exporters from the submodule
+    exporters = getattr(submodule, "exporters")
+    return exporters
+
+
+def show_exporter_dialog(exporters: list[Exporter]):
     app = get_qt_app()
     widget = MasalaExporterWidget(exporters=exporters)
     container = ContainerWidget(widget=widget, title="Masala Exporter", icon=get_masala_exporter_icon())

@@ -1,4 +1,4 @@
-from masala.api import Operator, Output
+from masala import Operator, Output
 
 
 def callback() -> list[dict[str, str]]:

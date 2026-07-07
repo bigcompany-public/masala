@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from masala.api import Input, Operator, Output
+from masala import Input, Operator, Output
 
 
 def callback(path: Path) -> list[list[str]]:

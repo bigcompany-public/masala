@@ -1,4 +1,4 @@
-from masala.api import Input, Operator
+from masala import Input, Operator
 
 
 def callback(controllers: list, geometries: list, assignment_metadata: dict):

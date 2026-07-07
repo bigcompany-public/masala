@@ -1,7 +1,8 @@
 from lucent import Codex
 
-from masala.api import Operator, Output
-from masala.example.codex import codex
+from masala import Operator, Output
+
+from ...codex_config import codex
 
 
 def callback() -> list[Codex]:

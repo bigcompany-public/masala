@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from masala.api import Input, Operator, Output
-from masala.example.codex import codex
+from masala import Input, Operator, Output
+
+from ...codex_config import codex
 
 
 def callback(path: Path, metadata: dict | None = None, other: bool = True):

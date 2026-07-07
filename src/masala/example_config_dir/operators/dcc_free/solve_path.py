@@ -2,8 +2,9 @@ from pathlib import Path
 
 from lucent import Convention
 
-from masala.api import Input, Operator, Output
-from masala.example.codex import codex
+from masala import Input, Operator, Output
+
+from ...codex_config import codex
 
 
 def callback(path: Path) -> tuple[Convention, dict]:

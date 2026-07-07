@@ -1,6 +1,6 @@
 from typing import Any
 
-from masala.api import Input, Operator
+from masala import Input, Operator
 
 
 def callback(value: Any):
