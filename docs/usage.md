@@ -1,31 +1,28 @@
 # Usage
 
-Configuring Masala for your project implies the following steps. 
+Configuring Masala for your project involves the following steps.
 
 - Defining naming conventions for the AssetBlocks
 - Registering the AssetBlocks
 - Creating Exporter(s) for each AssetBlock
 - Creating Assembly Operators to indicate how AssetBlocks should be imported and combined
-- Save node graphs, that act as Recipes for your end products.
+- Saving node graphs that act as Recipes for your end products
 
-Here is a representation of how each concept connects to each others.
+Here is a representation of how each concept connects to the others.
 
 ![data_chart](img/data_chart.png)
 
 !!! tip
-    This documentation teaches you how to create AssetBlocks "in a vaccuum", but you will most likely have to perform this steps in the context of a specific DCC. Thus, keep in mind everything we do here has to be fed into the configuration of:
-
-    - [Masala For Blender](https://github.com/bigcompany-public/masala_blender#)
-    - [Masala For Maya](https://github.com/bigcompany-public/masala_maya#)
+    This documentation teaches you how to create AssetBlocks "in a vacuum", but you will most likely have to perform these steps in the context of a specific DCC. Thus, keep in mind that everything we do here has to be fed into the configuration of [Masala DCC Implementations](./dccs.md)
 
 ## Defining Naming Conventions
 
-Masala uses the python package [Lucent](https://pypi.org/project/lucent-codex/) to define where AssetBlocks should be stored.
-For more information, see [Lucent official documentation](https://tristanlanguebien.github.io/lucent/)
+Masala uses the Python package [Lucent](https://pypi.org/project/lucent-codex/) to define where AssetBlocks should be stored.
+For more information, see the [Lucent official documentation](https://tristanlanguebien.github.io/lucent/)
 
-In Lucent, naming conventions are registered in a `Codex` objects that contains `Rules` (regexes that the fields must respect) and `Conventions` (templates for paths).
+In Lucent, naming conventions are registered in a `Codex` object that contains `Rules` (regexes that the fields must respect) and `Conventions` (templates for paths).
 
-Here is a minimal example on how to setup a few AssetBlock naming conventions.
+Here is a minimal example of how to set up a few AssetBlock naming conventions.
 
 === "masala_codex.py :memo:"
     ```python
@@ -50,7 +47,7 @@ Here is a minimal example on how to setup a few AssetBlock naming conventions.
         assetblock_static_mesh = Convention(
             "{@assetblock}", fixed_fields={"assetBlockType": "staticMesh", "extension": "usda"}
         )
-        # From there, you can add as many AssetBlocks Conventions as you like
+        # From there, you can add as many AssetBlock Conventions as you like
         assetblock_materials = Convention(
             "{@assetblock}", fixed_fields={"assetBlockType": "materials", "extension": "blend"}
         )
@@ -68,7 +65,7 @@ Here is a minimal example on how to setup a few AssetBlock naming conventions.
 
 ## Creating an AssetBlock
 
-Now that masala knows where to store the AssetBlocks, we can feed the Convention into an AssetBlock object.
+Now that Masala knows where to store the AssetBlocks, we can feed the Convention into an AssetBlock object.
 
 === "assetblocks.py"
     ```python
@@ -83,16 +80,16 @@ Now that masala knows where to store the AssetBlocks, we can feed the Convention
     )
     ```
 
-!!! success "This AssetBlock object will later be used to serve as a shared base for exporters and importers"
+!!! success "This AssetBlock object will later be used as a shared base for exporters and importers"
 
 ## Creating an Exporter
 
-Exporting an AssetBlock is made of 4 steps: 
+Exporting an AssetBlock consists of 4 steps:
 
 1. Identifying the path of the current scene.
-2. Parse the current scene's path to generate a destination path.
-2. Execute a function that does the export itself.
-3. Write metadata to a `.abmd` file that lies next to the exported file (abmd stands for "AssetBlockMetaData")
+2. Parsing the current scene's path to generate a destination path.
+3. Executing a function that performs the export itself.
+4. Writing metadata to a `.abmd` file that lies next to the exported file (abmd stands for "AssetBlockMetaData").
 
 These steps are encapsulated into an Exporter object.
 
@@ -136,24 +133,24 @@ These steps are encapsulated into an Exporter object.
     ![masala_mesh_exporter](img/masala_mesh_exporter.png)
 
 !!! tip
-    As stated earlier in this documentation, an AssetBlock can have multiple exporters. For instance, your asset pipeline may authorize artists to generate a mesh from both maya and blender.
+    As stated earlier in this documentation, an AssetBlock can have multiple exporters. For instance, your asset pipeline may allow artists to generate a mesh from both Maya and Blender.
 
-### About Metadatas
+### About Metadata
 
-An exporter will always create a `.abmd` file with a few informations saved in json format (time of the export, author, computer name...). 
+An exporter will always create a `.abmd` file containing a few pieces of information saved in JSON format (time of the export, author, computer name...).
 
-On top of these generic data: 
+On top of this generic data:
 
 - the `export_callback` may return a `dict` with extra data collected during the export process.
 - an optional `metadata_callback` can be provided to the exporter.
 
 ## Creating Operators
 
-When your AssetBlock is registered, it will appear in the available AssetBlocks of the Masala Assembler Tool.
+When your AssetBlock is registered, it will appear among the available AssetBlocks in the Masala Assembler Tool.
 
 ![masala_mesh_assembler](img/masala_mesh_assembler.png)
 
-This is a good start, but we cannot really do anything with it at the moment, as the AssetBlock Operator is just here to detect the available versions. We now need to create `Operators`, which are nodes that execute a function and in which data such as the AssetBlock's path or the AssetBlock's metadata can be plugged.
+This is a good start, but we cannot really do anything with it at the moment, as the AssetBlock Operator is just here to detect the available versions. We now need to create `Operators`, which are nodes that execute a function and into which data such as the AssetBlock's path or metadata can be plugged.
 
 Let's see how to create an Operator that imports the selected version:
 
@@ -184,7 +181,7 @@ Let's see how to create an Operator that imports the selected version:
     )
     ```
 
-The newly created Operator shows up in the available Operators in the Masala Assembler Tool.
+The newly created Operator shows up among the available Operators in the Masala Assembler Tool.
 
 ![example_import_operator0](img/example_import_operator0.png)
 
@@ -195,24 +192,24 @@ As you can see, the AssetBlock's path can be plugged into the "Path" input plug,
 ### About Inputs and Outputs
 
 !!! tip
-    Inputs have type validation : in this case, you won't be able to plug an integer into the Path input. If you want to be more permissive (for instance, to allow for str and Path objects) you may set `typ` to `typing.Any`
+    Inputs have type validation: in this case, you won't be able to plug an integer into the Path input. If you want to be more permissive (for instance, to allow for both str and Path objects) you may set `typ` to `typing.Any`.
 
 !!! tip
-    You may have noticed the import callback we wrote returned a list: each item of the list goes to each output port. It is expected that if you have 3 output ports, your function should return a list containing 3 objects
+    You may have noticed that the import callback we wrote returns a list: each item in the list goes to a corresponding output port. It is expected that if you have 3 output ports, your function should return a list containing 3 objects.
 
 !!! tip
-    By default, all Operators have a `Dependencies` input plug, used to indicate nodes that should be executed before the Operator runs. This plug does not pass any values around, it is just here to fine-tune evaluation order.
+    By default, all Operators have a `Dependencies` input plug, used to indicate nodes that should be executed before the Operator runs. This plug does not pass any values around: it is just here to fine-tune evaluation order.
 
 !!! tip
-    By defaut, all Operators have a `Executed` output plug that returns either `True` or `False`.
+    By default, all Operators have an `Executed` output plug that returns either `True` or `False`.
 
 ## Sharing Assembler Recipes
 
-Masala Assembler gives you the option to save your node graphs at the json format, so they can be loaded or imported. Within a Recipe Library, these files become your main way of sharing an asset pipeline across a team.
+Masala Assembler gives you the option to save your node graphs in JSON format, so they can be loaded or imported. Within a Recipe Library, these files become your main way of sharing an asset pipeline across a team.
 
 ![save_graph](img/save_graph.png)
 
-:rocket: Congratulations, you now have all the keys to create as many AssetBlocks, Exporters, Operators and Recipes as you like. With a little of creativity, you can use Masala to build the asset pipeline that fits your needs.
+:rocket: Congratulations, you now have all the keys to create as many AssetBlocks, Exporters, Operators, and Recipes as you like. With a little creativity, you can use Masala to build the asset pipeline that fits your needs.
 
 ---
 
