@@ -21,6 +21,8 @@ nav = [
     { "Abstract" = "abstract.md" },
     { "Usage" = "usage.md" },
     { "Tools" = "tools.md" },
+    { "DCC Implementations" = "dccs.md" },
+    { "Contact" = "contact.md" },
 ]
 
 # Palette toggle for dark mode
