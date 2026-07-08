@@ -1,9 +1,17 @@
 import importlib.util
+import os
 import sys
 from importlib.machinery import ModuleSpec
 from pathlib import Path
 
-from qtpy.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from masala.api import AssetBlock, Operator
 from masala.gui.container import ContainerDialog, ContainerWidget
@@ -101,7 +109,16 @@ def get_assembler_config_from_path(
     return (assetblocks, operators)
 
 
-def show_assembler_dialog(assetblocks: list[AssetBlock], operators: list[Operator]):
+def show_assembler_dialog(assetblocks: list[AssetBlock] | None = None, operators: list[Operator] | None = None):
+    if assetblocks is None or operators is None:
+        var = "MASALA_OPERATORS_CONFIG"
+        path = os.environ.get(var)
+        if not path:
+            raise RuntimeError(
+                f"Please provide assetblocks and operators, or provide a path to the operators configuration file with the {var} environment variable"
+            )
+        assetblocks, operators = get_assembler_config_from_path(path)
+
     app = get_qt_app()
     widget = MasalaAssemblerWidget(assetblocks=assetblocks, operators=operators)
     container = ContainerWidget(widget=widget, title="Masala Assembler", icon=get_masala_assembler_icon())

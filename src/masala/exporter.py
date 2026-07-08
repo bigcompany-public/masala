@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from enum import StrEnum, auto
 from importlib.machinery import ModuleSpec
@@ -467,7 +468,7 @@ class MasalaExporterWidget(QWidget):
             exporter_widget.run()
 
 
-def get_exporter_config_from_path(
+def get_exporters_config_from_path(
     exporters_module_path: str | Path,
 ) -> list[Exporter]:
     exporters_module_path = Path(exporters_module_path)
@@ -506,7 +507,16 @@ def get_exporter_config_from_path(
     return exporters
 
 
-def show_exporter_dialog(exporters: list[Exporter]):
+def show_exporter_dialog(exporters: list[Exporter] | None = None):
+    if not exporters:
+        var = "MASALA_EXPORTERS_CONFIG"
+        path = os.environ.get(var)
+        if not path:
+            raise RuntimeError(
+                f"Please provide exporters, or provide a path to the exporters configuration file with the {var} environment variable"
+            )
+        exporters = get_exporters_config_from_path(path)
+
     app = get_qt_app()
     widget = MasalaExporterWidget(exporters=exporters)
     container = ContainerWidget(widget=widget, title="Masala Exporter", icon=get_masala_exporter_icon())
