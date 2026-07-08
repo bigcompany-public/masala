@@ -48,6 +48,46 @@ Masala's configuration is actually a Python package, so you can store framework 
         from .codex_config import codex
         ```
 
+### Testing Your Configuration
+
+While following this documentation, you might want to open Masala Exporter or Masala Assembler to see the result. Here is how you can achieve that:
+
+=== "Masala Exporter"
+    ```python
+    from masala.exporter import show_exporter_dialog, get_exporters_config_from_path
+
+    exporters = get_exporters_config_from_path("path/to/exporters_config_dcc_name.py")
+    show_exporter_dialog(exporters)
+    ```
+
+=== "Masala Assembler"
+    ```python
+    from masala.assembler import show_assembler_dialog, get_assembler_config_from_path
+
+    assetblocks, operators = get_assembler_config_from_path("path/to/operators_config_dcc_name.py")
+    show_assembler_dialog(assetblocks, operators)
+    ```
+
+Alternatively, you can use the `MASALA_EXPORTERS_CONFIG` and the `MASALA_OPERATORS_CONFIG` environment variables to provide the path to configuration files.
+
+=== "Masala Exporter"
+    ```python
+    import os
+    from masala.exporter import show_exporter_dialog
+
+    os.environ["MASALA_EXPORTERS_CONFIG"] = "path/to/exporters_config.py"
+    show_exporter_dialog()
+    ```
+
+=== "Masala Assembler"
+    ```python
+    import os
+    from masala.assembler import show_assembler_dialog
+
+    os.environ["MASALA_OPERATORS_CONFIG"] = "path/to/operators_config.py"
+    show_assembler_dialog()
+    ```
+
 ## Naming Conventions
 
 Masala uses the Python package [Lucent](https://pypi.org/project/lucent-codex/) to define where AssetBlocks should be stored.
