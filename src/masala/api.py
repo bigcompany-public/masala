@@ -122,6 +122,12 @@ class Exporter:
         self.error: bool = False
         self.result: dict | None = None
 
+    def __repr__(self) -> str:
+        return f"{__class__.__name__}({self.assetblock.label})"
+
+    def __str__(self) -> str:
+        return f"{__class__.__name__}({self.assetblock.label})"
+
     def get_current_path(self) -> Path:
         return self.current_path_callback()
 
@@ -221,7 +227,19 @@ class NodeDescription:
     inputs: list[Input] = field(default_factory=list)
     outputs: list[Output] = field(default_factory=list)
 
+    def __repr__(self) -> str:
+        return f"{__class__.__name__}({self.label})"
+
+    def __str__(self) -> str:
+        return f"{__class__.__name__}({self.label})"
+
 
 @dataclass
 class Operator(NodeDescription):
     callback: Callable = field(kw_only=True)
+
+    def __repr__(self) -> str:
+        return f"{__class__.__name__}({self.label})"
+
+    def __str__(self) -> str:
+        return f"{__class__.__name__}({self.label})"
