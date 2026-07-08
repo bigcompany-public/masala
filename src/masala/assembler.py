@@ -59,20 +59,18 @@ class MasalaAssemblerWidget(QWidget):
 
 
 def get_assembler_config_from_path(
-    config_package_path: Path | str,
-    operators_submodule_name: str,
+    operators_module_path: Path | str,
 ) -> tuple[list[AssetBlock], list[Operator]]:
-    config_package_path = Path(config_package_path)
-    if operators_submodule_name.endswith(".py"):
-        operators_submodule_name = operators_submodule_name[:-3]
+    operators_module_path = Path(operators_module_path)
+    config_package_path = operators_module_path.parent
 
     # Ensure package structure
     required_paths = [
+        operators_module_path,
         config_package_path,
         config_package_path.joinpath("__init__.py"),
         config_package_path.joinpath("assetblocks_config.py"),
         config_package_path.joinpath("codex_config.py"),
-        config_package_path.joinpath(operators_submodule_name).with_suffix(".py"),
     ]
     for _path in required_paths:
         if not _path.exists():
@@ -96,7 +94,7 @@ def get_assembler_config_from_path(
     assetblocks = getattr(submodule, "assetblocks")
 
     # Load operators from the submodule
-    full_submodule_name = f"{package_name}.{operators_submodule_name}"
+    full_submodule_name = f"{package_name}.{operators_module_path.stem}"
     submodule = importlib.import_module(full_submodule_name)
     operators = getattr(submodule, "operators")
 
