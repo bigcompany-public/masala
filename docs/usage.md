@@ -50,7 +50,7 @@ Masala's configuration is actually a Python package, so you can store framework 
 
 ### Testing Your Configuration
 
-While following this documentation, you might want to open Masala Exporter or Masala Assembler to see the result. Here is how you can achieve that:
+While following this documentation, you can open Masala Exporter or Masala Assembler to verify your configuration.
 
 === "Masala Exporter"
     ```python
@@ -68,7 +68,7 @@ While following this documentation, you might want to open Masala Exporter or Ma
     show_assembler_dialog(assetblocks, operators)
     ```
 
-Alternatively, you can use the `MASALA_EXPORTERS_CONFIG` and the `MASALA_OPERATORS_CONFIG` environment variables to provide the path to configuration files.
+Alternatively, you can set the `MASALA_EXPORTERS_CONFIG` and `MASALA_OPERATORS_CONFIG` environment variables to the paths of your configuration files.
 
 === "Masala Exporter"
     ```python
