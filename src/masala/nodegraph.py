@@ -472,7 +472,7 @@ class AssemblerGraph(NodeGraph):
         self.assetblocks = assetblocks
         self.operators = operators
         self.configure_hotkeys()
-        self.register_assetbklock_nodes()
+        self.register_assetblock_nodes()
         self.register_operator_nodes()
         self.register_other_nodes()
 
@@ -546,7 +546,7 @@ class AssemblerGraph(NodeGraph):
     def evaluate_selected_nodes(self) -> None:
         self.evaluate_nodes(self.get_selected_masala_nodes())
 
-    def register_assetbklock_nodes(self):
+    def register_assetblock_nodes(self):
         for assetblock in self.assetblocks:
             node_description = NodeDescription(
                 name=assetblock.name,
