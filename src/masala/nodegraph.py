@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import graphlib
 import json
+import time
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +24,8 @@ from masala.api import (
 )
 from masala.gui.container import ContainerDialog, ContainerWidget
 from masala.gui.utils import get_masala_assembler_icon, get_qt_app
+from masala.logs import show_logs_dialog
+from masala.stdout import CaptureStdout
 
 NOT_SET = "NOT SET"
 
@@ -114,6 +118,7 @@ class MasalaNode(BaseNode):
 
     def __init__(self) -> None:
         super().__init__()
+        self.logs = ""
         self._state = NodeState.UNSET
         self._dependencies_port = self.add_dependency_port()
         self._described_input_ports = self.add_input_ports()
@@ -153,6 +158,25 @@ class MasalaNode(BaseNode):
         self.executed_port.value = self.is_executed
 
     def execute(self) -> None:
+        self.logs = ""
+        with CaptureStdout() as stdout:
+            start_time = time.perf_counter()
+
+            try:
+                self._monitored_execution()
+            except Exception:
+                elapsed = time.perf_counter() - start_time
+                self.error = True
+                print(traceback.format_exc())
+                print(f"An error occured after {elapsed:.4f} seconds")
+            else:
+                elapsed = time.perf_counter() - start_time
+                self.error = False
+                print(f"Execution took {elapsed:.4f} seconds")
+            finally:
+                self.logs = stdout.text()
+
+    def _monitored_execution(self):
         raise NotImplementedError
 
     def add_execute_button(self) -> None:
@@ -160,11 +184,25 @@ class MasalaNode(BaseNode):
         nodebutton: NodeButton = self.get_widget("execute")
         self.model.__dict__["execute"] = "placeholder"  # The button needs a property so it can be saved & copy pasted
         self.button = nodebutton._button
+        self.button.setFixedWidth(100)
         self.button.setText(self.EXECUTE_BUTTON_LABEL)
         self.button.clicked.connect(self.button_clicked)
+        self.button.setHidden(True)
+
+    def add_logs_button(self) -> None:
+        self.add_button("logs")
+        nodebutton: NodeButton = self.get_widget("logs")
+        self.model.__dict__["execute"] = "placeholder"  # The button needs a property so it can be saved & copy pasted
+        self.logs_button = nodebutton._button
+        self.logs_button.setFixedWidth(100)
+        self.logs_button.setText("Show Logs")
+        self.logs_button.clicked.connect(self.show_logs)
 
     def button_clicked(self) -> None:
         self.execute()
+
+    def show_logs(self) -> None:
+        show_logs_dialog(self.NODE_NAME, self.logs)
 
     def get_kwargs(self) -> dict[str, Any]:
         kwargs = {}
@@ -294,6 +332,7 @@ class AssetBlockWidget(QWidget):
         return self.version_combobox.currentData()
 
     def browse_button_clicked(self):
+        self.assetblock_node.logs = "Browsing"
         path = self.show_file_dialog()
         if not path:
             return
@@ -385,6 +424,7 @@ class AssetBlockNode(MasalaNode):
         self._wrapper = AssetBlockWidgetWrapper(parent=self.view, assetblock_node=self)
         self._widget = self._wrapper._widget
         self.add_custom_widget(self._wrapper)
+        self.add_logs_button()
 
     @property
     def fields_port(self) -> MasalaInputPort:
@@ -409,7 +449,7 @@ class AssetBlockNode(MasalaNode):
     def on_input_disconnected(self, in_port, out_port):
         self.update_browse_visibility()
 
-    def execute(self) -> None:
+    def _monitored_execution(self):
         try:
             # Get fields
             if self.fields_port.connected_ports():
@@ -439,7 +479,11 @@ class OperatorNode(MasalaNode):
     NODE_DESCRIPTION: Operator
     EXECUTE_BUTTON_LABEL = "Run"
 
-    def execute(self) -> None:
+    def __init__(self) -> None:
+        super().__init__()
+        self.add_logs_button()
+
+    def _monitored_execution(self) -> None:
         try:
             self.run_callback()
         except Exception:

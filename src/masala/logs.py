@@ -1,18 +1,23 @@
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QLabel, QPlainTextEdit, QPushButton, QVBoxLayout, QWidget
 
 from masala.gui.container import ContainerDialog, ContainerWidget
-from masala.gui.utils import get_qt_app
+from masala.gui.utils import get_qt_app, get_qta_icon
 
 
 class LogsWidget(QWidget):
-    def __init__(self, text: str, parent: QWidget | None = None):
+    def __init__(self, node_name: str, text: str, parent: QWidget | None = None):
         super().__init__(parent)
         self.text = text
+        self.node_name = node_name
         self.setup_ui()
         self.setup_signals()
 
     def setup_ui(self):
+        self.setMinimumWidth(400)
         layout = QVBoxLayout(self)
+        label = QLabel(self.node_name)
+        label.setProperty("tag", "H2")
+        layout.addWidget(label)
         self.logs = QPlainTextEdit()
         self.logs.setPlainText(self.text)
         layout.addWidget(self.logs)
@@ -35,13 +40,13 @@ class LogsWidget(QWidget):
         clipboard.setText(self.text, mode=clipboard.Mode.Clipboard)
 
 
-def show_logs_dialog(text: str, parent: QWidget | None = None):
+def show_logs_dialog(node_name: str, text: str, parent: QWidget | None = None):
     app = get_qt_app()
-    widget = LogsWidget(text)
-    container = ContainerWidget(widget)
+    widget = LogsWidget(node_name, text)
+    container = ContainerWidget(widget, "Logs", icon=get_qta_icon("mdi.clipboard-text"))
     dialog = ContainerDialog(container)
     dialog.exec()
 
 
 if __name__ == "__main__":
-    show_logs_dialog("yolo")
+    show_logs_dialog("my node", "yolo")
