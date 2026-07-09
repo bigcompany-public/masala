@@ -1,3 +1,4 @@
+from pynput.keyboard import Controller, Key
 from qtpy import QtCore
 from qtpy.QtWidgets import QFileDialog
 
@@ -46,9 +47,23 @@ def open_session(graph: AssemblerGraph):
     Prompts a file open dialog to load a session.
     """
     current = graph.current_session()
-    file_path = graph.load_dialog(current)
-    if file_path:
-        graph.load_session(file_path)
+    graph.recipes_dir.mkdir(exist_ok=True, parents=True)
+    file_path = QFileDialog.getOpenFileName(
+        graph._viewer,
+        caption="Open Graph",
+        dir=current or graph.recipes_dir.as_posix(),
+        filter="*.json",
+    )[0]
+
+    # Fix NodeGraphQt bug, that believes the Ctrl Button is pressed forever
+    keyboard = Controller()
+    keyboard.press(Key.ctrl_l)
+    keyboard.release(Key.ctrl_l)
+
+    if not file_path:
+        return
+
+    graph.load_session(file_path)
 
 
 def import_session(graph: AssemblerGraph):
@@ -56,9 +71,23 @@ def import_session(graph: AssemblerGraph):
     Prompts a file open dialog to load a session.
     """
     current = graph.current_session()
-    file_path = graph.load_dialog(current)
-    if file_path:
-        graph.import_session(file_path)
+    graph.recipes_dir.mkdir(exist_ok=True, parents=True)
+    file_path = QFileDialog.getOpenFileName(
+        graph._viewer,
+        caption="Open Graph",
+        dir=current or graph.recipes_dir.as_posix(),
+        filter="*.json",
+    )[0]
+
+    # Fix NodeGraphQt bug, that believes the Ctrl Button is pressed forever
+    keyboard = Controller()
+    keyboard.press(Key.ctrl_l)
+    keyboard.release(Key.ctrl_l)
+
+    if not file_path:
+        return
+
+    graph.import_session(file_path)
 
 
 def save_session(graph: AssemblerGraph):
@@ -86,6 +115,12 @@ def save_session_as(graph: AssemblerGraph):
         dir=graph.recipes_dir.as_posix(),
         filter="*.json",
     )[0]
+
+    # Fix NodeGraphQt bug, that believes the Ctrl Button is pressed forever
+    keyboard = Controller()
+    keyboard.press(Key.ctrl_l)
+    keyboard.release(Key.ctrl_l)
+
     if not file_path:
         return
 
