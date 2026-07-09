@@ -137,5 +137,7 @@ def show_assembler_dialog(
     widget = MasalaAssemblerWidget(assetblocks=assetblocks, operators=operators, recipes_path=recipes_path)
     container = ContainerWidget(widget=widget, title="Masala Assembler", icon=get_masala_assembler_icon())
     dialog = ContainerDialog(container=container)
+    dialog.resize(800, 500)
     dialog.show()
+    widget.graph_widget.reset_zoom()
     app.exec_()

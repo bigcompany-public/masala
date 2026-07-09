@@ -198,6 +198,15 @@ class MasalaNode(BaseNode):
         self.logs_button.setText("Show Logs")
         self.logs_button.clicked.connect(self.show_logs)
 
+    def add_invisible_button(self) -> None:
+        """
+        This button is just here to create extra width to the node
+        NodeGraphQt is quite complex in the way node size is computed, so the simplest way is to create an invisible widget
+        """
+        self.add_button("invisible")
+        nodebutton: NodeButton = self.get_widget("invisible")
+        nodebutton._button.setHidden(True)
+
     def button_clicked(self) -> None:
         self.execute()
 
@@ -482,6 +491,7 @@ class OperatorNode(MasalaNode):
     def __init__(self) -> None:
         super().__init__()
         # self.add_logs_button()
+        self.add_invisible_button()
 
     def _monitored_execution(self) -> None:
         try:
@@ -520,6 +530,9 @@ class AssemblerGraph(NodeGraph):
         self.register_assetblock_nodes()
         self.register_operator_nodes()
         self.register_other_nodes()
+
+    def selected_nodes(self) -> list[MasalaNode]:
+        return super().selected_nodes()
 
     def configure_hotkeys(self):
         hotkey_path = Path(__file__).parent / "hotkeys.json"
