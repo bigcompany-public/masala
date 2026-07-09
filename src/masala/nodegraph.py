@@ -22,8 +22,6 @@ from masala.api import (
     PortType,
     get_metadata_path,
 )
-from masala.gui.container import ContainerDialog, ContainerWidget
-from masala.gui.utils import get_masala_assembler_icon, get_qt_app
 from masala.logs import show_logs_dialog
 from masala.stdout import CaptureStdout
 
@@ -648,12 +646,3 @@ class AssemblerGraph(NodeGraph):
             },
         )
         self.register_node(new_class)
-
-
-def show_dialog(assetblocks: list[AssetBlock], operators: list[Operator]):
-    app = get_qt_app()
-    graph_widget = AssemblerGraph(assetblocks, operators)
-    container = ContainerWidget(widget=graph_widget.widget, title="Masala Assembler", icon=get_masala_assembler_icon())
-    dialog = ContainerDialog(container=container)
-    dialog.show()
-    app.exec_()
