@@ -80,7 +80,7 @@ To execute the entire graph, you can press the `Execute Graph` button or press `
 If you need more fine-tuned control over what is executed, you can:
 
 - Evaluate Selected Nodes (meaning "execute selected nodes and their parents") by pressing `Ctrl + E`
-- Run Single Nodes by clicking on the `Run Button` or by pressing `Ctrl + R`
+- Run Single Nodes by pressing `Ctrl + R`
 
 #### About Node Graph Evaluation Order
 
