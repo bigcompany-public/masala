@@ -1,4 +1,5 @@
 from qtpy import QtCore
+from qtpy.QtWidgets import QFileDialog
 
 from masala.nodegraph import AssemblerGraph
 
@@ -78,10 +79,17 @@ def save_session_as(graph: AssemblerGraph):
     """
     Prompts a file save dialog to serialize a session.
     """
-    current = graph.current_session()
-    file_path = graph.save_dialog(current)
-    if file_path:
-        graph.save_session(file_path)
+    graph.recipes_dir.mkdir(exist_ok=True, parents=True)
+    file_path = QFileDialog.getSaveFileName(
+        parent=graph._viewer,
+        caption="Save Graph As",
+        dir=graph.recipes_dir.as_posix(),
+        filter="*.json",
+    )[0]
+    if not file_path:
+        return
+
+    graph.save_session(file_path)
 
 
 def clear_session(graph: AssemblerGraph):

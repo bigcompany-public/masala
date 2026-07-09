@@ -467,10 +467,11 @@ class OperatorNode(MasalaNode):
 
 
 class AssemblerGraph(NodeGraph):
-    def __init__(self, assetblocks: list[AssetBlock], operators: list[Operator]) -> None:
+    def __init__(self, assetblocks: list[AssetBlock], operators: list[Operator], recipes_dir: Path) -> None:
         super().__init__()
         self.assetblocks = assetblocks
         self.operators = operators
+        self.recipes_dir = recipes_dir
         self.configure_hotkeys()
         self.register_assetblock_nodes()
         self.register_operator_nodes()

@@ -24,11 +24,13 @@ class MasalaAssemblerWidget(QWidget):
         self,
         assetblocks: list[AssetBlock],
         operators: list[Operator],
+        recipes_path: Path | None,
         parent: QWidget | None = None,
     ):
         super().__init__(parent)
         self.assetblocks = assetblocks
         self.operators = operators
+        self.recipes_path = Path(recipes_path) if recipes_path else Path.home()
         self.setup_ui()
         self.setup_signals()
 
@@ -46,7 +48,7 @@ class MasalaAssemblerWidget(QWidget):
         frame_layout = QVBoxLayout(frame)
         frame_layout.setContentsMargins(1, 1, 1, 1)
         frame.setProperty("depth", "3")
-        self.graph_widget = AssemblerGraph(self.assetblocks, self.operators)
+        self.graph_widget = AssemblerGraph(self.assetblocks, self.operators, self.recipes_path)
         frame_layout.addWidget(self.graph_widget.widget)
 
         # Bottom buttons
@@ -68,7 +70,7 @@ class MasalaAssemblerWidget(QWidget):
 
 def get_assembler_config_from_path(
     operators_module_path: Path | str,
-) -> tuple[list[AssetBlock], list[Operator]]:
+) -> tuple[list[AssetBlock], list[Operator], Path]:
     operators_module_path = Path(operators_module_path)
     config_package_path = operators_module_path.parent
 
@@ -106,10 +108,22 @@ def get_assembler_config_from_path(
     submodule = importlib.import_module(full_submodule_name)
     operators = getattr(submodule, "operators")
 
-    return (assetblocks, operators)
+    # Load recipes path from the submodule
+    recipes_path = Path.home()
+    recipes_module_path = config_package_path.joinpath("recipes_config.py")
+    if recipes_module_path.exists():
+        full_submodule_name = f"{package_name}.{recipes_module_path.stem}"
+        submodule = importlib.import_module(full_submodule_name)
+        recipes_path = getattr(submodule, "recipes")
+
+    return (assetblocks, operators, recipes_path)
 
 
-def show_assembler_dialog(assetblocks: list[AssetBlock] | None = None, operators: list[Operator] | None = None):
+def show_assembler_dialog(
+    assetblocks: list[AssetBlock] | None = None,
+    operators: list[Operator] | None = None,
+    recipes_path: Path | None = None,
+):
     if assetblocks is None or operators is None:
         var = "MASALA_OPERATORS_CONFIG"
         path = os.environ.get(var)
@@ -117,10 +131,10 @@ def show_assembler_dialog(assetblocks: list[AssetBlock] | None = None, operators
             raise RuntimeError(
                 f"Please provide assetblocks and operators, or provide a path to the operators configuration file with the {var} environment variable"
             )
-        assetblocks, operators = get_assembler_config_from_path(path)
+        assetblocks, operators, recipes_path = get_assembler_config_from_path(path)
 
     app = get_qt_app()
-    widget = MasalaAssemblerWidget(assetblocks=assetblocks, operators=operators)
+    widget = MasalaAssemblerWidget(assetblocks=assetblocks, operators=operators, recipes_path=recipes_path)
     container = ContainerWidget(widget=widget, title="Masala Assembler", icon=get_masala_assembler_icon())
     dialog = ContainerDialog(container=container)
     dialog.show()
