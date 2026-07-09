@@ -124,7 +124,7 @@ class MasalaNode(BaseNode):
         self._described_input_ports = self.add_input_ports()
         self._executed_port = self.add_executed_port()
         self._described_output_ports = self.add_output_ports()
-        self.add_execute_button()
+        # self.add_execute_button()
 
     @property
     def described_input_ports(self) -> list[MasalaInputPort]:
@@ -424,7 +424,7 @@ class AssetBlockNode(MasalaNode):
         self._wrapper = AssetBlockWidgetWrapper(parent=self.view, assetblock_node=self)
         self._widget = self._wrapper._widget
         self.add_custom_widget(self._wrapper)
-        self.add_logs_button()
+        # self.add_logs_button()
 
     @property
     def fields_port(self) -> MasalaInputPort:
@@ -481,7 +481,7 @@ class OperatorNode(MasalaNode):
 
     def __init__(self) -> None:
         super().__init__()
-        self.add_logs_button()
+        # self.add_logs_button()
 
     def _monitored_execution(self) -> None:
         try:
