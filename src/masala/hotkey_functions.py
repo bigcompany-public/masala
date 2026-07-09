@@ -355,3 +355,8 @@ def evaluate_graph(graph: AssemblerGraph):
 def show_logs(graph: AssemblerGraph):
     for node in graph.selected_nodes():
         node.show_logs()
+
+    # Fix NodeGraphQt bug, that believes the Ctrl Button is pressed forever
+    keyboard = Controller()
+    keyboard.press(Key.ctrl_l)
+    keyboard.release(Key.ctrl_l)

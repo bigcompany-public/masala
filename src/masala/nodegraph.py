@@ -160,6 +160,7 @@ class MasalaNode(BaseNode):
     def execute(self) -> None:
         self.logs = ""
         with CaptureStdout() as stdout:
+            print(f"Executing node : {self.name()}")
             start_time = time.perf_counter()
 
             try:
