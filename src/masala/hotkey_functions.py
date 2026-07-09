@@ -350,3 +350,8 @@ def evaluate_selected_nodes(graph: AssemblerGraph):
 
 def evaluate_graph(graph: AssemblerGraph):
     graph.evaluate()
+
+
+def show_logs(graph: AssemblerGraph):
+    for node in graph.selected_nodes():
+        node.show_logs()

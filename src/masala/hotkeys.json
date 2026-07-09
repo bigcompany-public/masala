@@ -163,6 +163,13 @@
         "file":"./hotkey_functions.py",
         "function_name":"evaluate_graph",
         "shortcut":"Ctrl+Shift+E"
+      },
+      {
+        "type":"command",
+        "label":"Show Logs",
+        "file":"./hotkey_functions.py",
+        "function_name":"show_logs",
+        "shortcut":"Ctrl+L"
       }
     ]
   },
