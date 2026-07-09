@@ -14,11 +14,14 @@ dependencies = [
     "QtAwesome",
     "NodeGraphQt",
     "setuptools",
-    "pip>=26.0.1",
     "pynput>=1.8.2",
 ]
 
 [project.optional-dependencies]
+dev = [
+    "pip>=26.0.1"
+]
+
 docs = [
     "zensical",
     "mkdocstrings-python"
