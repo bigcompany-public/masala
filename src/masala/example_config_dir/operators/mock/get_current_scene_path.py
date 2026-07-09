@@ -2,9 +2,12 @@ from pathlib import Path
 
 from masala import Operator, Output
 
+from ...codex_config import codex
+
 
 def callback() -> list[Path]:
-    return [Path("//srv-bc-fs1/Norman/assetWorkspace/lab/elderSprite/mdl/blender/elderSprite_mdl_v001_init.blend")]
+    fields = {"asset": "myAsset", "version": "001"}
+    return [Path(codex.convs.asset_modeling_workfile.format(fields))]
 
 
 get_current_scene_path = Operator(

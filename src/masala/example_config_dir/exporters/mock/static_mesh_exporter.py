@@ -1,11 +1,14 @@
 from pathlib import Path
 
 from masala import Exporter
+
 from ...assetblocks.staticmesh import static_mesh
+from ...codex_config import codex
 
 
 def get_path() -> Path:
-    return Path("//srv-bc-fs1/Norman/assetWorkspace/lab/elderSprite/mdl/blender/elderSprite_mdl_v001_init.blend")
+    fields = {"asset": "myAsset", "version": "001"}
+    return Path(codex.convs.asset_modeling_workfile.format(fields))
 
 
 def export(path: Path):
