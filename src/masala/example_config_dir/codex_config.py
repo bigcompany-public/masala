@@ -6,13 +6,15 @@ from lucent import Codex, Convention, Conventions, Rule, Rules
 class MasalaRules(Rules):
     default = Rule(r"[a-zA-Z0-9]+")
     extension = Rule(r"[a-zA-Z0-9]+", examples=["mp3", "png", "mov"])
-    asset = Rule(r"([a-z]+)([A-Z][a-z]*)*", examples=["peach", "redApple", "philip", "cassie"])
+    asset = Rule(r"([a-z]+)([A-Z][a-z]*)*", examples=["redApple", "philip", "chair"])
+    assetBlockType = Rule(r"[a-zA-Z]+", examples=["staticMesh", "materials", "rig"])
+    task = Rule(r"[a-zA-Z0-9]+", examples=["mdl", "rig", "surf"])
     version = Rule(r"\d{3}", examples=["001", "002", "003"])
 
 
 class MasalaConventions(Conventions):
     # Project
-    project_root = Convention(f"{Path.home()}/myMasalaProject")
+    project_root = Convention(f"{Path.home().as_posix()}/myMasalaProject")
 
     # Assets
     asset_work_dir = Convention("{@project_root}/assetWorkspace/{asset}/{task}")
@@ -26,7 +28,7 @@ class MasalaConventions(Conventions):
     )
 
     # AssetBlocks
-    assetblock_dir = Convention("{@project_root}/assetBlocksLibrary/{type}/{asset}/{assetBlock}")
+    assetblock_dir = Convention("{@project_root}/assetBlocksLibrary/{asset}/{assetBlock}")
     assetblock_static_mesh = Convention(
         "{@assetblock_dir}/v{version}/{asset}_{assetBlock}_v{version}.{extension}",
         fixed_fields={"assetBlock": "staticMesh", "extension": "usda"},
