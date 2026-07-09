@@ -6,6 +6,7 @@ from ...codex_config import codex
 
 
 def callback() -> list[Codex]:
+    print("Fetching Codex Object")
     return [codex]
 
 
